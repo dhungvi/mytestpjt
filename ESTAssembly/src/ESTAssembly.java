@@ -346,7 +346,7 @@ public class ESTAssembly {
 	 *  @param nOfNodes number of nodes
 	 *  @param g a directed graph, the second dimension has three elements:
 	 *  	index of starting node, index of ending node, weight between them.
-	 *  	if there is no edge, weight=INT_MAX.
+	 *  	if there is no edge, weight=0.
 	 */
 	private WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
 		// Make a directed graph.
@@ -356,7 +356,7 @@ public class ESTAssembly {
 			dGraph.addVertex(i, Integer.toString(i));
 		}
 		for (int j=0; j<g.length; j++) {
-			if (g[j][2] != INT_MAX) {	//there is an edge between the nodes
+			if (g[j][2] != 0) {	//there is an edge between the nodes
 				dGraph.addEdge(g[j][0], g[j][1], -g[j][2]);
 			}
 		}
