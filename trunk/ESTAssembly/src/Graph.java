@@ -6,8 +6,8 @@ import com.mhhe.clrs2e.WeightedAdjacencyListGraph;
 import com.mhhe.clrs2e.WeightedEdgeIterator;
 
 public class Graph {
-	private final int INT_MAX = 2147483647;
-	private final int INT_MIN = -2147483647;
+	protected final int INT_MAX = 2147483647;
+	protected final int INT_MIN = -2147483647;
 	private final int num = 5;	//specify the number of the closest nodes the program finds for one node;
 								//function 'getNClosestNodes' uses 'num' as parameter.
 

@@ -39,4 +39,52 @@ public class RandomNum {
         return r;
     }
 
+    // generate error in the input string. 0.4base/100bases error.
+	public String errEst(String s) {
+		int len = s.length();
+		String retStr = s;
+		String tmp = null;
+		double prob = len / 100 * 0.4;
+		prob = 1;
+		for (int i=0; i<5; i++){
+		if (ran.nextDouble() < prob) {	//generate errors in the string
+			int pos = unifRan(0, len);
+			
+			if (ran.nextDouble() < 1/3) { //delete
+				if (pos < len-1) { //not the last character
+					retStr = s.substring(0, pos) + s.substring(pos+1);
+				} else {
+					retStr = s.substring(0, pos);
+				}
+			} else if (ran.nextDouble() < 2/3) { //insert
+				tmp = genBase();
+				retStr = s.substring(0, pos) + tmp + s.substring(pos);
+			} else { //change
+				do {
+					tmp = genBase();
+				} while (s.charAt(pos) == tmp.charAt(0));
+				if (pos < len-1) { //not the last character
+					retStr = s.substring(0, pos) + tmp + s.substring(pos+1);
+				} else {
+					retStr = s.substring(0, pos)+ tmp;
+				}
+			}
+			
+		}
+		}
+		return retStr;
+	}
+
+	private String genBase() {
+		if (ran.nextDouble() < 0.25) {
+			return "A";
+		} else if (ran.nextDouble() < 0.5) {
+			return "G";
+		} else if (ran.nextDouble() < 0.75) {
+			return "C";
+		} else {
+			return "T";
+		} 
+	}
+
 }

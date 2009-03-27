@@ -40,7 +40,7 @@ public class ESTAssembly {
 	 * Generate a Graph object, all the ests are considered to be one node in the graph;
 	 * No edge in the graph. Edges will be added in "createAlignArray" function.
 	 */
-	private void readEstFile() {
+	protected void readEstFile() {
 		boolean bExists = false;
 		
 		try{ 
@@ -217,6 +217,7 @@ public class ESTAssembly {
 		 *  		not start from the left-end node, the directed tree will be unconnected.
 		 */
 		sPos = new int[alignArray.length];	//store starting positions of all the nodes
+		WeightedAdjacencyListGraph primMST = null;
 		for (int i=0; i<leftMostNodes.size(); i++) {
 			int leftEnd = leftMostNodes.get(i).intValue();
 			printLeftEndInfo(leftEnd);
@@ -235,7 +236,7 @@ public class ESTAssembly {
 					dGraph[t][1] = 0;
 				}
 			}
-			WeightedAdjacencyListGraph primMST = constructMaxTree(alignArray.length, dGraph);
+			primMST = constructMaxTree(alignArray.length, dGraph);
 			
 			//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
 			sPos[leftEnd] = sPos[0];
@@ -261,13 +262,16 @@ public class ESTAssembly {
 				}
 			}
 		}
+		//print mst
+		//System.out.println("Minimum Spanning Tree for starting positions:");
+		//System.out.println(primMST);
 		
 	}
 	
 	/*
 	 * print elements in 'dGraph'
 	 */
-	private void printDgraph(int[][] d){
+	protected void printDgraph(int[][] d){
 		for (int i=0; i<d.length; i++) {
 			System.out.println(d[i][0] + "\t" + d[i][1] + "\t" + d[i][2]);
 		}
@@ -279,7 +283,7 @@ public class ESTAssembly {
 	 * 		whether or not they are real left ends;
 	 * 		If they are false left ends, print the overlap length they have with other nodes.
 	 */
-	private void printLeftEndInfo(int leftEnd) {
+	protected void printLeftEndInfo(int leftEnd) {
 		int sp = Integer.parseInt(g.getNameOfNode(leftEnd));	//actual starting position of the node
 		System.out.println("Node " + leftEnd + " starts from " + sp);
 		int ln = g.getLenOfNode(leftEnd);
@@ -311,7 +315,7 @@ public class ESTAssembly {
 	/* 
 	 * Calculate starting positions for each node
 	 */
-	private void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree) {
+	protected void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree) {
 		WeightedEdgeIterator ite = (WeightedEdgeIterator) tree.edgeIterator(parentNode);
 		while (ite.hasNext()) {
 			Vertex v = (Vertex) ite.next();
@@ -348,7 +352,7 @@ public class ESTAssembly {
 	 *  	index of starting node, index of ending node, weight between them.
 	 *  	if there is no edge, weight=0.
 	 */
-	private WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
+	protected WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
 		// Make a directed graph.
 		WeightedAdjacencyListGraph dGraph =
 		    new WeightedAdjacencyListGraph(nOfNodes, true);
