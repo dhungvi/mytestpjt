@@ -15,7 +15,7 @@ public class EstGenerator {
 	private int expoMean = 20; 	//mean of exponential distribution
 	private int expoLower = 17; //lower bound of exponential distribution
 	private int expoUpper = 23; //upper bound of exponential distribution
-	private int numEsts = 50;	//number of ests
+	private int numEsts = 60;	//number of ests
 	private String oriStr;	//store the original string from SourceFile
 	private RandomNum ran;
 	
@@ -72,11 +72,14 @@ public class EstGenerator {
 		        out.write(Integer.toString(lenEst));
 		        out.write("\n");
 		        int endIndex = startPos + lenEst;
+		        String inStr = "";
 		        if (endIndex > oriStr.length()) {
-		        	out.write(oriStr.substring(startPos));
+		        	inStr = oriStr.substring(startPos);
 		        } else {
-		        	out.write(oriStr.substring(startPos, endIndex));
+		        	inStr = oriStr.substring(startPos, endIndex);
 		        }
+		        //out.write(ran.errEst(inStr));
+		        out.write(inStr);
 		        out.write("\n");
 			}
 	        out.flush();	

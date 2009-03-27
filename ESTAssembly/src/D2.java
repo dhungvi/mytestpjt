@@ -12,15 +12,15 @@ import java.util.ArrayList;
  */
 
 public class D2 {
-	private final int INT_MAX = 2147483647;
-	private int windowSize = 10;	// the size of window
+	protected final int INT_MAX = 2147483647;
+	protected int windowSize = 10;	// the size of window
 	//private int ovlWindowSize = 0;// the window size for overlap distance, it is assigned 
 								// in 'getOVLDistance' with the value of overlap length.
 	private final int boundOfWord = 5; 	// the upper bound and the lower bound have the same value
 	private int THRESHOLD = 36;	// THRESHOLD = [(windowSize)-(boundOfWord)+1]^2
 						// if the d2 distance is bigger than the threshold, we consider it to be infinite(=INT_MAX).
 	private final int THRESHOLD_OVL = 0;	// THRESHOLD for overlap distance
-	private final int InclusionThreshold = 0;	// use this value to define overlap distance of two inclusion subsequence.
+	protected final int InclusionThreshold = 0;	// use this value to define overlap distance of two inclusion subsequence.
 						// this value is used in getOVLDistance for judging inclusion(s1 includes s2, or versa).
 	private char[] alphabet = new char[]{'A', 'T', 'C', 'G'};	// alphabet of the two compared strings
 	private int[][] v2Array;//	the array is used to store all the frequency 
