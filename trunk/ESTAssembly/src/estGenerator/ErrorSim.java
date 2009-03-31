@@ -1,16 +1,21 @@
 package estGenerator;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Properties;
+
 /*
  * This class simulate two kinds of errors: single base error and stutter.
  */
 public class ErrorSim {
 	RandomNum rand;
-	double paraP1 = 0.01;
-	double paraP2 = 0.02;
-	double paraP3 = -0.5;
-	double para1P4 = 0.5;
-	double para2P4 = 50;
-	double[] singleErrorProb = new double[]{1/3,1/3,1/3}; //substitution, deletion or insertion, each with probability 1/3
+	double paraP1;
+	double paraP2;
+	double paraP3;
+	double para1P4;
+	double para2P4;
+	double[] singleErrorProb; //substitution, deletion or insertion, each with probability 1/3
 														  //here [0]:substitution, [1]:deletion, [2]:insertion.
 	String oriEst;	//original est
 	int[][] errorFlag;	//record error type. The first dimension is the index of the base; the second dimension is the flag of error.
@@ -21,8 +26,17 @@ public class ErrorSim {
 	/*
 	 * constructor
 	 */
-	public ErrorSim(RandomNum r) {
+	public ErrorSim(RandomNum r, Properties props) {
 		rand = r;
+		paraP1 = Double.parseDouble(props.getProperty("paraP1"));
+		paraP2 = Double.parseDouble(props.getProperty("paraP2"));
+		paraP3 = Double.parseDouble(props.getProperty("paraP3"));
+		para1P4 = Double.parseDouble(props.getProperty("para1P4"));
+		para2P4 = Double.parseDouble(props.getProperty("para2P4"));
+		double d1 = Double.parseDouble(props.getProperty("singleErrorProbSub"));
+		double d2 = Double.parseDouble(props.getProperty("singleErrorProbIns"));
+		double d3 = Double.parseDouble(props.getProperty("singleErrorProbDel"));
+		singleErrorProb = new double[]{d1,d2,d3};
 	}
 	
 	/*
@@ -158,11 +172,31 @@ public class ErrorSim {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
+		Properties props = null;
+		try {
+			props = getProperties("config.properties");
+		} catch (IOException e) {
+			System.err.println("Get config.properties failed, " + e);
+	    	return;
+		}
+
 		RandomNum ran = new RandomNum();
-		ErrorSim es = new ErrorSim(ran);
+		ErrorSim es = new ErrorSim(ran, props);
 		String input = "ATCGATCTTTTTGGGACTG";
 		System.out.println(es.genErrors(input));
 	}
+	
+	//only used for test by main
+	private static Properties getProperties(String fName) throws IOException {
+		Properties props = new Properties();
+		File f = new File(fName);
+        
+        if (!f.exists()) {
+        	return props;
+        }
+        
+        props.load(new FileInputStream(f)); 
+        return props;
+    }
 
 }
