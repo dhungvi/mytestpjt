@@ -1,4 +1,8 @@
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Properties;
 
 
 
@@ -13,21 +17,30 @@ import java.util.ArrayList;
 
 public class D2 {
 	protected final int INT_MAX = 2147483647;
-	protected int windowSize = 10;	// the size of window
+	protected int windowSize;	// the size of window
 	//private int ovlWindowSize = 0;// the window size for overlap distance, it is assigned 
 								// in 'getOVLDistance' with the value of overlap length.
-	private final int boundOfWord = 5; 	// the upper bound and the lower bound have the same value
-	private int THRESHOLD = 36;	// THRESHOLD = [(windowSize)-(boundOfWord)+1]^2
+	protected final int boundOfWord; 	// the upper bound and the lower bound have the same value
+	protected int THRESHOLD;	// THRESHOLD = [(windowSize)-(boundOfWord)+1]^2
 						// if the d2 distance is bigger than the threshold, we consider it to be infinite(=INT_MAX).
-	private final int THRESHOLD_OVL = 0;	// THRESHOLD for overlap distance
-	protected final int InclusionThreshold = 0;	// use this value to define overlap distance of two inclusion subsequence.
+	protected int THRESHOLD_OVL;	// THRESHOLD for overlap distance
+	protected int InclusionThreshold;	// use this value to define overlap distance of two inclusion subsequence.
 						// this value is used in getOVLDistance for judging inclusion(s1 includes s2, or versa).
+						// When there is no error in est, we can set it to be zero;
+						// When error occur, if the average overlap length is len, we can set it to be (1-(len-4)/len)*100; here 4 means 
+						//	allowing 2 different bases in two ests. That is, if the different bases<=2, we assume them to be inclusion.
 	private char[] alphabet = new char[]{'A', 'T', 'C', 'G'};	// alphabet of the two compared strings
 	private int[][] v2Array;//	the array is used to store all the frequency 
 							//	of all the possible words for all the windows in s2 (the second string).
 	private String[] words;	// store all the possible words.
 	
-	public D2() {
+	public D2(Properties props) {
+		windowSize = Integer.parseInt(props.getProperty("windowSize"));
+		boundOfWord = Integer.parseInt(props.getProperty("boundOfWord"));
+		THRESHOLD = Integer.parseInt(props.getProperty("THRESHOLD"));
+		THRESHOLD_OVL = Integer.parseInt(props.getProperty("boundOfWord"));
+		InclusionThreshold = Integer.parseInt(props.getProperty("InclusionThreshold"));
+		
 		initWords();	// initialize the variable 'words'
 	}
 	
@@ -360,13 +373,34 @@ public class D2 {
 	}
 	
 	public static void main(String args[]) {
-		D2 d= new D2();
-		String s1 = "AGATGGTTCCTTTCTTTACCTGCTCTGTAAAGA";
-		String s2 = "AAGGAGGTGAACATCGATGACGACGAACACTGT";
+		Properties props = null;
+		try {
+			props = getProperties("config.properties");
+		} catch (IOException e) {
+			System.err.println("Get config.properties failed, " + e);
+	    	return;
+		}
+		
+		D2 d= new D2(props);
+		String s1 = "AAGATTCAGATCCAGGAATT";
+		String s2 = "CTGGTGGGGAAGATTCAGAT";
 		int dis = d.getD2Distance(s1, s2);
 		int[] dis1 = d.getOVLDistance(s1, s2, dis);
 		System.out.println("d2 distance is: " + dis);
 		System.out.println("length of overlap is: " + dis1[0]);
 		System.out.println("overlap distance is: " + dis1[1]);
 	}
+	
+	//only used for test by main
+	protected static Properties getProperties(String fName) throws IOException {
+		Properties props = new Properties();
+		File f = new File(fName);
+        
+        if (!f.exists()) {
+        	return props;
+        }
+        
+        props.load(new FileInputStream(f)); 
+        return props;
+    }
 }

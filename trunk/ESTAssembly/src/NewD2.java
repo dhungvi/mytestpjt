@@ -1,16 +1,20 @@
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Properties;
 
 import neobio.alignment.BasicScoringScheme;
 import neobio.alignment.IncompatibleScoringSchemeException;
 import neobio.alignment.NeedlemanWunsch;
 
 public class NewD2 extends D2{
+	
+	public NewD2(Properties props) {
+		super(props);
+		// TODO Auto-generated constructor stub
+	}
+	
 	private int alignmentThreshold = 40;
 	
-	
-	public NewD2() {
-		
-	}
 	
 	/**
 	 * Overload the method of parent class
@@ -101,7 +105,7 @@ public class NewD2 extends D2{
 		 */
 		if ((Math.abs(lenOverlap) == s2.length()) && 
 				(s2.length() <= s1.length()) && 
-				((disRight == InclusionThreshold)||	(Math.abs(disLeft) == InclusionThreshold))) {
+				((disRight <= InclusionThreshold)||	(Math.abs(disLeft) <= InclusionThreshold))) {
 			lenOverlap = 0;
 			ovlDis = INT_MAX;
 		}
@@ -110,9 +114,9 @@ public class NewD2 extends D2{
 		 * 
 		 * Note: if ovlWindowSize > length of s1, disRight and disLeft would not be equal to zero.
 		 */
-		if ((s1.length() <= s2.length()) && 
-				(disRight == disLeft) &&
-				(disRight == InclusionThreshold)) {
+		if ((Math.abs(lenOverlap) == s1.length()) && 
+				(s1.length() <= s2.length()) && 
+				((disRight <= InclusionThreshold)||	(Math.abs(disLeft) <= InclusionThreshold))) {
 			lenOverlap = 0;
 			ovlDis = INT_MAX;
 		}
@@ -146,7 +150,7 @@ public class NewD2 extends D2{
 		int[] disArray = new int[l];	//store value of d2Dis for all the windows in s2.
 		
 		for (int i=0; i<l; i++) {
-			int dis = super.getD2Distance(w, s2.substring(i, i+w.length()));
+ 			int dis = super.getD2Distance(w, s2.substring(i, i+w.length()));
 			if (dis < minDis) {
 				minDis = dis;
 			} 
@@ -225,15 +229,22 @@ public class NewD2 extends D2{
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		NewD2 d2 = new NewD2();
-		String s1 = "CAATCGGGGAACTA";
-		String s2 = "CAATCGGGGATACT";
+		Properties props = null;
+		try {
+			props = getProperties("config.properties");
+		} catch (IOException e) {
+			System.err.println("Get config.properties failed, " + e);
+	    	return;
+		}
+		
+		NewD2 d2 = new NewD2(props);
+		String s1 = "GGCATGCACAAGTGGAAGCTGGACCAGTGTCTGGTGTGCACTGTGTG";
+		String s2 = "GCTGGACCAGTGTATGATGTGCACTGTGTGTGGAGACTGCACTGG";
 		System.out.println(d2.getSimlarityScore(s1,s2));
 		//System.out.println(d2.getDistance(s1,s2));
 		int tmp[] = new int[2];
 		tmp = d2.getOVLDistance(s1, s2);
-		System.out.println(tmp[1]);
+		System.out.println(tmp[1] + " " + tmp[0]);
 
 	}
 

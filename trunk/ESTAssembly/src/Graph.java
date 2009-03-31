@@ -1,4 +1,5 @@
 import java.util.ArrayList;
+import java.util.Properties;
 
 import com.mhhe.clrs2e.Prim;
 import com.mhhe.clrs2e.Vertex;
@@ -14,9 +15,9 @@ public class Graph {
 	ArrayList<Node> graphNodes;
 	D2 d2;
 	
-	public Graph() {
+	public Graph(Properties p) {
 		graphNodes = new ArrayList<Node> ();
-		d2 = new D2();
+		d2 = new D2(p);
 	}
 	
 	public void addNode(Node s) {
@@ -518,6 +519,7 @@ public class Graph {
 	
 	
 	public static void main(String args[]) {
+		/*
 		Graph g= new Graph();
 		//g.getNSmallValues(data, 5);
 		g.addNode(new Node("0","ATCGTGCAAATTT"));
@@ -537,7 +539,7 @@ public class Graph {
 		//int a[][] = g.alignNodes();
 		WeightedAdjacencyListGraph mst = g.genMST();
 		g.get2CloseNodesFromGrand(mst, 2);
-
+	*/
 	}
 
 }
