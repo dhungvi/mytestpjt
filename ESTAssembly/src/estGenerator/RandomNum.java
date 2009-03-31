@@ -75,7 +75,7 @@ public class RandomNum {
 		return retStr;
 	}
 
-	private String genBase() {
+	public String genBase() {
 		if (ran.nextDouble() < 0.25) {
 			return "A";
 		} else if (ran.nextDouble() < 0.5) {
@@ -87,4 +87,45 @@ public class RandomNum {
 		} 
 	}
 
+	/*
+	 * generate a different base than the input one with a uniform probability.
+	 */
+	public char genDiffBase(char c) {
+		char tmp;
+		do {
+			tmp = genBase().charAt(0);
+		} while (c == tmp);
+		return tmp;
+	}
+	/*
+	 * decide if one event will happen according to the probability
+	 * @param p the probability of the event happening
+	 * @return true or false
+	 */
+	public boolean happenOrNot(double p) {
+		if (ran.nextDouble() < p) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	/*
+	 * Given a list of events, decide which one will happen
+	 * @param p an double array which store the probability of each event
+	 * @return int the index of the event in the input array
+	 */
+	public int whichHappen(double[] p) {
+		double tmp = ran.nextDouble();
+		for (int i=1; i<p.length; i++) {
+			p[i] = p[i-1] + p[i]; 
+		}
+		int index = 0;
+		for (; index<p.length-1; index++) {
+			if (tmp < p[index]) {
+				return index;
+			}
+		}
+		return p.length-1;
+	}
 }

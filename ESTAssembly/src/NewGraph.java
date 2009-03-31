@@ -1,14 +1,19 @@
 import java.util.ArrayList;
+import java.util.Properties;
 
 import com.mhhe.clrs2e.Vertex;
 import com.mhhe.clrs2e.WeightedAdjacencyListGraph;
 import com.mhhe.clrs2e.WeightedEdgeIterator;
 
-
+/*
+ * This class is subclass of Graph. It assigns NewD2 to member variable d2.
+ */
 public class NewGraph extends Graph{
-	public NewGraph() {
-		graphNodes = new ArrayList<Node> ();
-		d2 = new NewD2();
+	
+	public NewGraph(Properties p) {
+		super(p);
+		//graphNodes = new ArrayList<Node> ();
+		d2 = new NewD2(p);
 	}
 
 	/**

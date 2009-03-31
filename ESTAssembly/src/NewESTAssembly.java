@@ -1,24 +1,31 @@
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Properties;
 
 import com.mhhe.clrs2e.Prim;
 import com.mhhe.clrs2e.Vertex;
 import com.mhhe.clrs2e.WeightedAdjacencyListGraph;
 import com.mhhe.clrs2e.WeightedEdgeIterator;
 
-
+/*
+ * This class is a subclass of ESTAssembly. It assigns NewGraph to member variable g.
+ */
 public class NewESTAssembly extends ESTAssembly{
-	public NewESTAssembly() {
-		ests = new ArrayList<String> ();
-		alignArray = null;
-		sPos = null;
-		g = new NewGraph();
+	public NewESTAssembly(Properties props) {
+		super(props);
+		g = new NewGraph(props);
 	}
 
-	/*
+	/* Overload the method of parent class
 	 * Find the left-most node(alignNodes[][0]==-1);
 	 * Use alignNodes to construct a tree whose values are maximal, that is, 
 	 * 		the tree has maximal overlap length;
 	 * Calculate the starting position of each node.
+	 * 
+	 * This function is different from the same-name method in its parent class in that 
+	 * in order to get starting positions it constructs a MST instead of Maximum Spanning
+	 * tree like what the parent method does. The weight of the Minimum Spanning tree is 
+	 * the overlap distance instead of overlap length.
 	 */
 	public void processAlignArray() {
 		ArrayList <Integer> leftMostNodes = new ArrayList<Integer> ();
@@ -249,6 +256,7 @@ public class NewESTAssembly extends ESTAssembly{
 	}
 
 	/* 
+	 * The same-name method as the parent class. But it adds one more parameter d.
 	 * Calculate starting positions for each node
 	 */
 	protected void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree, int[][] d) {
@@ -276,13 +284,21 @@ public class NewESTAssembly extends ESTAssembly{
 			getStartPos(index, leftEnd, tree, d);
 		}
 	}
-
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		NewESTAssembly assemble = new NewESTAssembly();
+		Properties props = null;
+		try {
+			props = getProperties("config.properties");
+		} catch (IOException e) {
+			System.err.println("Get config.properties failed, " + e);
+	    	return;
+		}
+
+		NewESTAssembly assemble = new NewESTAssembly(props);
+
 		assemble.readEstFile();
 		assemble.createAlignArray();
 		assemble.processAlignArray();

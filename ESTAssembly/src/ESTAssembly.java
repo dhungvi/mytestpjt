@@ -1,8 +1,11 @@
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Properties;
+
 import com.mhhe.clrs2e.*;
 
 public class ESTAssembly {
@@ -13,7 +16,6 @@ public class ESTAssembly {
 	Graph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
 	WeightedAdjacencyListGraph mstForG;	//minimum spanning tree generated from 'g'
 										//It is generated in 'createAlignArray' function.
-
 	/*
 	 * store the position of aligned nodes
 	 * 1st-dimension: index of nodes in graph;
@@ -28,11 +30,11 @@ public class ESTAssembly {
 	int[] sPos;	//starting positions of all the nodes, initialized in "processAlignArray" function.
 				//the index in the array is the index of the node, the value is its starting position. 
 	
-	public ESTAssembly() {
+	public ESTAssembly(Properties props) {
 		ests = new ArrayList<String> ();
 		alignArray = null;
 		sPos = null;
-		g= new Graph();
+		g= new Graph(props);
 	}
 	
 	/*
@@ -373,8 +375,30 @@ public class ESTAssembly {
 		return alignArray;
 	}
 	
+	protected static Properties getProperties(String fName) throws IOException {
+		Properties props = new Properties();
+		File f = new File(fName);
+        
+        if (!f.exists()) {
+        	return props;
+        }
+        
+        props.load(new FileInputStream(f)); 
+        return props;
+    }
+
+	
 	public static void main(String[] args) {
-		ESTAssembly assemble = new ESTAssembly();
+		Properties props = null;
+		try {
+			props = getProperties("config.properties");
+		} catch (IOException e) {
+			System.err.println("Get config.properties failed, " + e);
+	    	return;
+		}
+
+		ESTAssembly assemble = new ESTAssembly(props);
+
 		assemble.readEstFile();
 		assemble.createAlignArray();
 		assemble.processAlignArray();

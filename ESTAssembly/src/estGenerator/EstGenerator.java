@@ -3,24 +3,37 @@ package estGenerator;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Properties;
 
 public class EstGenerator {
-	private final String SourceFile = "sq.fa";	//only has one line, no char '>' at start
-	private final String OutFile = "est.fa";
-	private int uniLower = 0;	//lower bound of uniform distribution	
-	private int uniUpper = 280;  //upper bound of uniform distribution,uniUpper=lenOfGene-expoMean
-	private int expoMean = 20; 	//mean of exponential distribution
-	private int expoLower = 17; //lower bound of exponential distribution
-	private int expoUpper = 23; //upper bound of exponential distribution
-	private int numEsts = 60;	//number of ests
+	private String SourceFile = "sq.fa";	//only has one line, no char '>' at start
+	private String OutFile = "est.fa";
+	private int uniLower;	//lower bound of uniform distribution	
+	private int uniUpper;  //upper bound of uniform distribution,uniUpper=lenOfGene-expoMean
+	private int expoMean; 	//mean of exponential distribution
+	private int expoLower; //lower bound of exponential distribution
+	private int expoUpper; //upper bound of exponential distribution
+	private int numEsts;	//number of ests
+	
 	private String oriStr;	//store the original string from SourceFile
 	private RandomNum ran;
+	private ErrorSim errSim;
 	
-	public EstGenerator() {
+	public EstGenerator(Properties props) {
 		ran = new RandomNum();
+		errSim = new ErrorSim(ran);
+		SourceFile = props.getProperty("SourceFile");
+		OutFile = props.getProperty("OutFile");
+		uniLower = Integer.parseInt(props.getProperty("uniLower"));
+		uniUpper = Integer.parseInt(props.getProperty("uniUpper"));
+		expoMean = Integer.parseInt(props.getProperty("expoMean"));
+		expoLower = Integer.parseInt(props.getProperty("expoLower"));
+		expoUpper = Integer.parseInt(props.getProperty("expoUpper"));
+		numEsts = Integer.parseInt(props.getProperty("numEsts"));
 	}
 	
 	public EstGenerator(long seed) {
@@ -78,8 +91,9 @@ public class EstGenerator {
 		        } else {
 		        	inStr = oriStr.substring(startPos, endIndex);
 		        }
+		        out.write(errSim.genErrors(inStr));
 		        //out.write(ran.errEst(inStr));
-		        out.write(inStr);
+		        //out.write(inStr);
 		        out.write("\n");
 			}
 	        out.flush();	
@@ -88,12 +102,33 @@ public class EstGenerator {
 	    	System.out.println(e.toString());
 	    }
 	}
+
+	protected static Properties getProperties(String fName) throws IOException {
+		Properties props = new Properties();
+		File f = new File(fName);
+        
+        if (!f.exists()) {
+        	return props;
+        }
+        
+        props.load(new FileInputStream(f)); 
+        return props;
+    }
+
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-		EstGenerator gen = new EstGenerator();
+		Properties props = null;
+		try {
+			props = getProperties("config.properties");
+		} catch (IOException e) {
+			System.err.println("Get config.properties failed, " + e);
+	    	return;
+		}
+
+		EstGenerator gen = new EstGenerator(props);
 		gen.readSourceFile();
 		gen.writeToFile();
 	}
