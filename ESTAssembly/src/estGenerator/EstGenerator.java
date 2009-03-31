@@ -25,7 +25,7 @@ public class EstGenerator {
 	
 	public EstGenerator(Properties props) {
 		ran = new RandomNum();
-		errSim = new ErrorSim(ran);
+		errSim = new ErrorSim(ran, props);
 		SourceFile = props.getProperty("SourceFile");
 		OutFile = props.getProperty("OutFile");
 		uniLower = Integer.parseInt(props.getProperty("uniLower"));
