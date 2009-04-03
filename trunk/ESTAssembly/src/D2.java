@@ -29,6 +29,8 @@ public class D2 {
 						// When there is no error in est, we can set it to be zero;
 						// When error occur, if the average overlap length is len, we can set it to be (1-(len-4)/len)*100; here 4 means 
 						//	allowing 2 different bases in two ests. That is, if the different bases<=2, we assume them to be inclusion.
+	protected int alignmentThreshold; //It is used in NewD2 class. It's the threshold for alignment. That is, all the alignment with
+											// the distance which is bigger than the value will be seen as infinity. 
 	private char[] alphabet = new char[]{'A', 'T', 'C', 'G'};	// alphabet of the two compared strings
 	private int[][] v2Array;//	the array is used to store all the frequency 
 							//	of all the possible words for all the windows in s2 (the second string).
@@ -40,7 +42,7 @@ public class D2 {
 		THRESHOLD = Integer.parseInt(props.getProperty("THRESHOLD"));
 		THRESHOLD_OVL = Integer.parseInt(props.getProperty("boundOfWord"));
 		InclusionThreshold = Integer.parseInt(props.getProperty("InclusionThreshold"));
-		
+		alignmentThreshold = Integer.parseInt(props.getProperty("alignmentThreshold"));
 		initWords();	// initialize the variable 'words'
 	}
 	

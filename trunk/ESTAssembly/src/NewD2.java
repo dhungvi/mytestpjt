@@ -13,7 +13,7 @@ public class NewD2 extends D2{
 		// TODO Auto-generated constructor stub
 	}
 	
-	private int alignmentThreshold = 40;
+	
 	
 	
 	/**

@@ -47,6 +47,13 @@ public class Graph {
 	}
 	
 	/*
+	 * get sequence of the node with index i
+	 */
+	public String getSeqOfNode(int i) {
+		return graphNodes.get(i).getSeq();
+	}
+	
+	/*
 	 * generate a minimum spanning tree from the graph 'graphNodes'
 	 */
 	public WeightedAdjacencyListGraph genMST() {

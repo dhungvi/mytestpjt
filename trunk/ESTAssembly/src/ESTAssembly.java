@@ -1,7 +1,9 @@
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -11,7 +13,9 @@ import com.mhhe.clrs2e.*;
 public class ESTAssembly {
 	int INT_MAX = 2147483647;
 	int INT_MIN = -2147483647;
-	String inFileName = "est.fa";
+	String oriFileName;	//store the original gene data. It's used in "printEsts" method.
+	String inFileName;
+	String resultFileName;
 	ArrayList<String> ests;	//store all the ests. It is generated in 'readEstFile' function.
 	Graph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
 	WeightedAdjacencyListGraph mstForG;	//minimum spanning tree generated from 'g'
@@ -31,6 +35,9 @@ public class ESTAssembly {
 				//the index in the array is the index of the node, the value is its starting position. 
 	
 	public ESTAssembly(Properties props) {
+		oriFileName = props.getProperty("SourceFile");
+		inFileName = props.getProperty("OutFile");
+		resultFileName = props.getProperty("ResultFile");
 		ests = new ArrayList<String> ();
 		alignArray = null;
 		sPos = null;
@@ -343,6 +350,81 @@ public class ESTAssembly {
 			System.out.println(sPos[i] + "	" + g.getNameOfNode(i));
 		}
 	}
+
+	/* 
+	 * Print all the ests to the file named as the value of "resultFile"
+	 */
+	public void printEsts() {
+		try{ 
+			File outFile = new File(resultFileName);
+			boolean bExists = outFile.exists();
+			if (bExists) {
+				outFile.delete();
+			}
+			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
+
+			/*
+			 * print the original sequence
+			 */
+			File oriFile = (new File(oriFileName));
+			if (!oriFile.exists()) {
+				System.out.println("SourceFile does not exist!");
+				return;
+			}
+			BufferedReader in = new BufferedReader(new FileReader(oriFile));
+			out.write(in.readLine());
+			out.write("\n");
+			in.close();	
+
+			/*
+			 * print all the ests
+			 */
+			//Firstly, sort the array sPos
+			StartPos[] resultArray = new StartPos[sPos.length]; //store the starting positions of ests
+			for (int i=0; i<sPos.length; i++) {
+				resultArray[i] = new StartPos(sPos[i], g.getSeqOfNode(i));
+			}
+			MergeSort merge = new MergeSort();
+			merge.sort(resultArray);
+			//Secondly, print the ests
+			for (int i=0; i<resultArray.length; i++) {
+				for (int j=0; j<resultArray[i].pos; j++) {
+					out.write(" ");
+				}
+				out.write(resultArray[i].seq);
+				out.write("\n");
+			}
+
+			out.flush();
+			out.close();
+		}catch(IOException e){ 
+			System.out.println(e.toString());
+		} 
+	}
+
+	static class StartPos implements Comparable<StartPos> {
+		int pos;
+		String seq;
+		public StartPos(int p, String s) {
+			pos = p;
+			seq = s;
+		}
+		
+		public int compareTo(StartPos other) {
+			//Returns 0 if the argument is equal to this; 			
+			//a value less than 0 if the argument is greater than this; 
+			//and a value greater than 0 if the argument is less than this. 
+			if (this.pos == other.pos) {
+				return 0;
+			} else if (this.pos > other.pos) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+	}	
+
+	
 	/*
 	 * Construct a directed Maximum spanning tree.
 	 * 	Assign the corresponding negative value to the weight of each edge (e.g., assign -5 to 5);

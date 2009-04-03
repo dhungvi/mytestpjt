@@ -10,8 +10,8 @@ import java.io.IOException;
 import java.util.Properties;
 
 public class EstGenerator {
-	private String SourceFile = "sq.fa";	//only has one line, no char '>' at start
-	private String OutFile = "est.fa";
+	private String SourceFile;	//only has one line, no char '>' at start
+	private String OutFile;
 	private int uniLower;	//lower bound of uniform distribution	
 	private int uniUpper;  //upper bound of uniform distribution,uniUpper=lenOfGene-expoMean
 	private int expoMean; 	//mean of exponential distribution
