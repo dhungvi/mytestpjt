@@ -25,4 +25,11 @@ public class Node {
 	public String getName() {
 		return name;
 	}
+
+	/*
+	 * get sequence of the node
+	 */
+	public String getSeq() {
+		return sequence;
+	}
 }

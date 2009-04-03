@@ -201,10 +201,10 @@ public class NewESTAssembly extends ESTAssembly{
 					dGraph[t][1] = 0;
 				}
 			}
+			//print mst
+			System.out.println("Minimum Spanning Tree for starting positions:");
+			System.out.println(primMST);
 		}
-		//print mst
-		System.out.println("Minimum Spanning Tree for starting positions:");
-		System.out.println(primMST);
 		
 	}
 
@@ -303,7 +303,7 @@ public class NewESTAssembly extends ESTAssembly{
 		assemble.createAlignArray();
 		assemble.processAlignArray();
 		assemble.printSPos();
-
+		assemble.printEsts();
 	}
 
 }
