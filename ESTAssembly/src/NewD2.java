@@ -61,6 +61,7 @@ public class NewD2 extends D2{
 	 		int tmpDis = INT_MAX;
 			if (tLenOverlap > s1.length()) {	//if s1 is included in s2
 				tmpDis = this.getDistance(s1.substring(0, s1.length()), s2.substring(lPos));
+				tLenOverlap = s1.length();
 			} else {
 				tmpDis = this.getDistance(s1.substring(0, tLenOverlap), s2.substring(lPos));
 			}
@@ -79,6 +80,7 @@ public class NewD2 extends D2{
 	 		int tmpDis = INT_MAX;
 			if (lenInS1 < 0) {	//if s1 is included in s2
 				tmpDis = this.getDistance(s1.substring(0), s2.substring(0, tLenOverlap));
+				tLenOverlap = s1.length();
 			} else {
 				tmpDis = this.getDistance(s1.substring(lenInS1), s2.substring(0, tLenOverlap));
 			}
@@ -238,8 +240,8 @@ public class NewD2 extends D2{
 		}
 		
 		NewD2 d2 = new NewD2(props);
-		String s1 = "GGCATGCACAAGTGGAAGCTGGACCAGTGTCTGGTGTGCACTGTGTG";
-		String s2 = "GCTGGACCAGTGTATGATGTGCACTGTGTGTGGAGACTGCACTGG";
+		String s1 = "GTATTAAAGTGATCGACACCAACAACCATCGTCCCCAGTTTTCTA";
+		String s2 = "GATCGACACCAACAACCATCGTCCCCAGTTTTCTAAACCAAAGTATGA";
 		System.out.println(d2.getSimlarityScore(s1,s2));
 		//System.out.println(d2.getDistance(s1,s2));
 		int tmp[] = new int[2];
