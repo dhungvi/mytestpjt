@@ -154,7 +154,7 @@ public class NewESTAssembly extends ESTAssembly{
 		 *  		not start from the left-end node, the directed tree will be unconnected.
 		 */
 		sPos = new int[alignArray.length];	//store starting positions of all the nodes
-		int[][] tmpGraph = dGraph;	//keep the original values of dGraph to pass to constructMinTree as parameter.
+		//int[][] tmpGraph = dGraph;	//keep the original values of dGraph to pass to constructMinTree as parameter.
 									//because dGraph will be changed in the following for loop.
 		WeightedAdjacencyListGraph primMST = null;
 		for (int i=0; i<leftMostNodes.size(); i++) {
@@ -182,7 +182,7 @@ public class NewESTAssembly extends ESTAssembly{
 			sPos[leftEnd] = sPos[0];
 			sPos[0] = Integer.parseInt(g.getNameOfNode(leftEnd)); //starting position of the node
 			//get starting positions for the nodes in primMST
-			getStartPos(0, leftEnd, primMST, tmpGraph);
+			getStartPos(0, leftEnd, primMST, dGraph);
 			//exchange sPos[0] and sPos[leftEnd] to recover index 0 in sPos
 			int tmp = sPos[0];
 			sPos[0] = sPos[leftEnd];
@@ -268,10 +268,10 @@ public class NewESTAssembly extends ESTAssembly{
 			
 			int overlapLen = 0;
 			for (int i=0; i<d.length; i++) {
-				if ((d[i][0] == parentNode) && (d[i][1] == index)) {
-					overlapLen = d[i][3];
-					break;
-				}
+					if ((d[i][0] == parentNode) && (d[i][1] == index)) {
+						overlapLen = d[i][3];
+						break;
+					}
 			}
 			
 			if (parentNode == 0) { // it's left end node actually
