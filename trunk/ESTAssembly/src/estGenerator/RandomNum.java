@@ -115,7 +115,12 @@ public class RandomNum {
 	 * @param p an double array which store the probability of each event
 	 * @return int the index of the event in the input array
 	 */
-	public int whichHappen(double[] p) {
+	public int whichHappen(double[] prob) {
+		double[] p = new double[prob.length];
+		for (int i=0; i<prob.length; i++) {
+			p[i] = prob[i];
+		}
+		
 		double tmp = ran.nextDouble();
 		for (int i=1; i<p.length; i++) {
 			p[i] = p[i-1] + p[i]; 
@@ -123,9 +128,11 @@ public class RandomNum {
 		int index = 0;
 		for (; index<p.length-1; index++) {
 			if (tmp < p[index]) {
+				System.out.println(index);
 				return index;
 			}
 		}
+		System.out.println(index);
 		return p.length-1;
 	}
 }
