@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.Properties;
 
 import com.mhhe.clrs2e.*;
@@ -16,6 +17,7 @@ public class ESTAssembly {
 	String oriFileName;	//store the original gene data. It's used in "printEsts" method.
 	String inFileName;
 	String resultFileName;
+	String consensusFileName;
 	ArrayList<String> ests;	//store all the ests. It is generated in 'readEstFile' function.
 	Graph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
 	WeightedAdjacencyListGraph mstForG;	//minimum spanning tree generated from 'g'
@@ -38,6 +40,7 @@ public class ESTAssembly {
 		oriFileName = props.getProperty("SourceFile");
 		inFileName = props.getProperty("OutFile");
 		resultFileName = props.getProperty("ResultFile");
+		consensusFileName = props.getProperty("ConsensusFile");
 		ests = new ArrayList<String> ();
 		alignArray = null;
 		sPos = null;
@@ -424,6 +427,170 @@ public class ESTAssembly {
 		}
 	}	
 
+	/* 
+	 * Calculate inversions for all the calculated positions of ESTs
+	 */
+	public void calcInversion() {
+			//Firstly, sort the array sPos
+			StartPos2[] resultArray = new StartPos2[sPos.length]; //store the starting positions of ests
+			for (int i=0; i<sPos.length; i++) {
+				resultArray[i] = new StartPos2(sPos[i], g.getNameOfNode(i));
+			}
+			MergeSort merge = new MergeSort();
+			merge.sort(resultArray);
+			
+			boolean flag = true;
+			for (int j=1; j<resultArray.length; j++) {
+				if (resultArray[j].realStartPos < resultArray[j-1].realStartPos) {
+					flag = false;
+					break;
+				}
+			}
+			
+			if (flag) {
+				System.out.println("All the ests have correct position order!");
+			} else {
+				System.out.println("The ests do not have correct position order!");
+			}
+	}
+
+	static class StartPos2 implements Comparable<StartPos2> {
+		int pos;
+		int realStartPos;
+		public StartPos2(int p, String s) {
+			pos = p;
+			realStartPos = (Integer.valueOf(s)).intValue();
+		}
+		
+		public int compareTo(StartPos2 other) {
+			//Returns 0 if the argument is equal to this; 			
+			//a value less than 0 if the argument is greater than this; 
+			//and a value greater than 0 if the argument is less than this. 
+			if (this.pos == other.pos) {
+				return 0;
+			} else if (this.pos > other.pos) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
+	}	
+	
+	/*
+	 * Get consensus from the ESTs.
+	 * According to the starting positions of ESTs, calculate the consensus base for each position.
+	 */
+	public String getConsensus() {
+		//sort the array sPos
+		StartPos[] resultArray = new StartPos[sPos.length]; //store the starting positions of ests
+		for (int i=0; i<sPos.length; i++) {
+			resultArray[i] = new StartPos(sPos[i], g.getSeqOfNode(i));
+		}
+		MergeSort merge = new MergeSort();
+		merge.sort(resultArray);
+
+		// Create an array which stores all the bases with the same position for all the ESTs.
+		int lenOfArray = resultArray[resultArray.length-1].pos+resultArray[resultArray.length-1].seq.length(); 
+		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			tmpArraylists[i] = new ArrayList<Character>();
+		}
+		
+		// Put all the bases into the array
+		for (int i=0; i<resultArray.length; i++) {
+			int tmpSPos = resultArray[i].pos;
+			String tmpStr = resultArray[i].seq;
+			for (int j=0; j<tmpStr.length(); j++) {
+				int p = tmpSPos+j;
+				if (p < lenOfArray) {
+					tmpArraylists[p].add(tmpStr.charAt(j));
+				}
+			}
+		}
+		
+		// Calculate consensus base for each position, and put them into an char array
+		char[] consensus = new char[lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			consensus[i] = getConsensusBase(tmpArraylists[i]);
+		}
+		
+		String retStr = String.valueOf(consensus);
+		//System.out.println(String.valueOf(consensus));
+		return retStr;
+	}
+	
+	/*
+	 * Calculate the consensus base from several characters
+	 */
+	private char getConsensusBase(ArrayList<Character> lst) {
+		int numA = 0;
+		int numG = 0;
+		int numC = 0;
+		int numT = 0;
+		
+		for (int i=0; i<lst.size(); i++) {
+			switch (lst.get(i).charValue()) {
+				case 'A': 
+					numA++;
+				case 'G':
+					numG++;
+				case 'C':
+					numC++;
+				case 'T':
+					numT++;
+			}
+		}
+		
+		int max = Math.max(Math.max(Math.max(numA, numG), numC), numT);
+		
+		if (numA == max) {
+			return 'A';
+		} else if (numG == max) {
+			return 'G';
+		} else if (numC == max) {
+			return 'C';
+		} else {
+			return 'T';
+		}
+	}
+	
+	/*
+	 * print the original sequence and consensus into a file which is specified in the property file.
+	 */
+	public void printConsensus() {
+		try{ 
+			File outFile = new File(consensusFileName);
+			boolean bExists = outFile.exists();
+			if (bExists) {
+				outFile.delete();
+			}
+			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
+
+			/*
+			 * print the original sequence
+			 */
+			File oriFile = (new File(oriFileName));
+			if (!oriFile.exists()) {
+				System.out.println("SourceFile does not exist!");
+				return;
+			}
+			BufferedReader in = new BufferedReader(new FileReader(oriFile));
+			out.write(in.readLine());
+			out.write("\n");
+			in.close();	
+
+			/*
+			 * print the consensus
+			 */
+			out.write(getConsensus());
+			out.write("\n");
+			
+			out.flush();
+			out.close();
+		}catch(IOException e){ 
+			System.out.println(e.toString());
+		} 
+	}
 	
 	/*
 	 * Construct a directed Maximum spanning tree.

@@ -216,6 +216,8 @@ public class NewD2 extends D2{
 		int score = INT_MAX;
 		try {
 			score = algorithm.getScore();
+			//System.out.println(algorithm.getPairwiseAlignment().getGappedSequence1());
+			//System.out.println(algorithm.getPairwiseAlignment().getGappedSequence2());
 			//System.out.println(algorithm.getPairwiseAlignment());
 		} catch (IncompatibleScoringSchemeException e) {
 			// TODO Auto-generated catch block
@@ -240,13 +242,13 @@ public class NewD2 extends D2{
 		}
 		
 		NewD2 d2 = new NewD2(props);
-		String s1 = "GTATTAAAGTGATCGACACCAACAACCATCGTCCCCAGTTTTCTA";
-		String s2 = "GATCGACACCAACAACCATCGTCCCCAGTTTTCTAAACCAAAGTATGA";
+		String s1 = "CTATTAAAGTGATCGACACCAACAACCATCGTCCCCAGTTTTCTAAACCAAAGTATGAAGTGGATG";
+		String s2 = "TTTTCTAAACCAAAGTATGAAGTGGATGTCTCTGAGGACACCCCACCTGAG";
 		System.out.println(d2.getSimlarityScore(s1,s2));
 		//System.out.println(d2.getDistance(s1,s2));
-		int tmp[] = new int[2];
-		tmp = d2.getOVLDistance(s1, s2);
-		System.out.println(tmp[1] + " " + tmp[0]);
+		//int tmp[] = new int[2];
+		//tmp = d2.getOVLDistance(s1, s2);
+		//System.out.println(tmp[1] + " " + tmp[0]);
 
 	}
 

@@ -1,3 +1,8 @@
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -202,10 +207,10 @@ public class NewESTAssembly extends ESTAssembly{
 				}
 			}
 			//print mst
-			System.out.println("Minimum Spanning Tree for starting positions:");
-			System.out.println(primMST);
+			//System.out.println("Minimum Spanning Tree for starting positions:");
+			//System.out.println(primMST);
 		}
-		
+		//this.printConsensus(leftMostNodes);
 	}
 
 	protected WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
@@ -230,6 +235,62 @@ public class NewESTAssembly extends ESTAssembly{
 			System.out.println(d[i][0] + "\t" + d[i][1] + "\t" + d[i][2] + "\t" + d[i][3]);
 		}
 		System.out.println();
+	}
+
+	/*
+	 * overload the same-name method of parent class.
+	 * print the original sequence and multiple consensus into a file which is specified in the property file.
+	 * The printed consensuses start from all the assumed starting position.
+	 */
+	public void printConsensus(ArrayList <Integer> leftEnds) {
+		try{ 
+			File outFile = new File(consensusFileName);
+			boolean bExists = outFile.exists();
+			if (bExists) {
+				outFile.delete();
+			}
+			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
+
+			/*
+			 * print the original sequence
+			 */
+			File oriFile = (new File(oriFileName));
+			if (!oriFile.exists()) {
+				System.out.println("SourceFile does not exist!");
+				return;
+			}
+			BufferedReader in = new BufferedReader(new FileReader(oriFile));
+			out.write(in.readLine());
+			out.write("\n");
+			in.close();	
+
+			/*
+			 * print all the consensuses
+			 */
+			String tmpStr = getConsensus();
+			for (int i=0; i<leftEnds.size()-1; i++) {
+				int pos1 = leftEnds.get(i).intValue();
+				int pos2 = leftEnds.get(i+1).intValue();
+				String s = tmpStr.substring(pos1, pos2+1);
+				for (int j=0; j<pos1; j++) {
+					out.write(" ");
+				}
+				out.write(s);
+				out.write("\n");
+			}
+			int pos2 = leftEnds.get(leftEnds.size()-1);
+			String s = tmpStr.substring(pos2);
+			for (int j=0; j<pos2; j++) {
+				out.write(" ");
+			}
+			out.write(s);
+			out.write("\n");
+			
+			out.flush();
+			out.close();
+		}catch(IOException e){ 
+			System.out.println(e.toString());
+		} 
 	}
 
 	/*
@@ -303,7 +364,9 @@ public class NewESTAssembly extends ESTAssembly{
 		assemble.createAlignArray();
 		assemble.processAlignArray();
 		assemble.printSPos();
-		assemble.printEsts();
+		//assemble.printConsensus();
+		//assemble.printEsts();
+		assemble.calcInversion();
 	}
 
 }
