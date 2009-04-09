@@ -439,19 +439,12 @@ public class ESTAssembly {
 			MergeSort merge = new MergeSort();
 			merge.sort(resultArray);
 			
-			boolean flag = true;
-			for (int j=1; j<resultArray.length; j++) {
-				if (resultArray[j].realStartPos < resultArray[j-1].realStartPos) {
-					flag = false;
-					break;
-				}
+			int[] inversionArray = new int[resultArray.length];
+			for (int j=0; j<resultArray.length; j++) {
+				inversionArray[j] = resultArray[j].realStartPos;
 			}
-			
-			if (flag) {
-				System.out.println("All the ests have correct position order!");
-			} else {
-				System.out.println("The ests do not have correct position order!");
-			}
+			System.out.print( "The assembly has " );
+            System.out.println(Inversions.countInversions(inversionArray) + " inversions.");
 	}
 
 	static class StartPos2 implements Comparable<StartPos2> {

@@ -140,11 +140,11 @@ public class NewESTAssembly extends ESTAssembly{
 		}
 		
 		//print mst
-		System.out.println("Original minimum Spanning Tree:");
-		System.out.println(mstForG);
+		//System.out.println("Original minimum Spanning Tree:");
+		//System.out.println(mstForG);
 		//print dGraph
-		System.out.println("dGraph:");
-		printDgraph(dGraph);
+		//System.out.println("dGraph:");
+		//printDgraph(dGraph);
 		
 		System.out.println("There are " + leftMostNodes.size() + " left-most nodes.");
 		
