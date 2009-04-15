@@ -128,11 +128,9 @@ public class RandomNum {
 		int index = 0;
 		for (; index<p.length-1; index++) {
 			if (tmp < p[index]) {
-				System.out.println(index);
 				return index;
 			}
 		}
-		System.out.println(index);
 		return p.length-1;
 	}
 }

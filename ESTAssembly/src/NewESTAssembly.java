@@ -140,11 +140,11 @@ public class NewESTAssembly extends ESTAssembly{
 		}
 		
 		//print mst
-		//System.out.println("Original minimum Spanning Tree:");
-		//System.out.println(mstForG);
+		System.out.println("Original minimum Spanning Tree:");
+		System.out.println(mstForG);
 		//print dGraph
-		//System.out.println("dGraph:");
-		//printDgraph(dGraph);
+		System.out.println("dGraph:");
+		printDgraph(dGraph);
 		
 		System.out.println("There are " + leftMostNodes.size() + " left-most nodes.");
 		
@@ -364,8 +364,8 @@ public class NewESTAssembly extends ESTAssembly{
 		assemble.createAlignArray();
 		assemble.processAlignArray();
 		assemble.printSPos();
-		//assemble.printConsensus();
-		//assemble.printEsts();
+		assemble.printConsensus();
+		assemble.printEsts();
 		assemble.calcInversion();
 	}
 
