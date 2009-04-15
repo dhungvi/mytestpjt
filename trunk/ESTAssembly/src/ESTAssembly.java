@@ -98,8 +98,12 @@ public class ESTAssembly {
 	
 	public void createAlignArray() {
 		//alignArray = g.alignNodes();	
+		System.out.println("Start to generate MST.");
 		mstForG = g.genMST();
+		System.out.println("End to generate MST.");
+		System.out.println("Start to generate 6-tuples.");
 		alignArray = g.get2CloseNodesFromMST(mstForG);
+		System.out.println("End to generate 6-tuples.");
 	}
 
 	/*

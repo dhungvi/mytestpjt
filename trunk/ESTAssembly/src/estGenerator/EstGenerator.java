@@ -79,7 +79,8 @@ public class EstGenerator {
 				 */
 				out.write(">");
 				int startPos = ran.unifRan(uniLower, uniUpper);
-				int lenEst = ran.expoRan(expoMean, expoLower, expoUpper);
+				//int lenEst = ran.expoRan(expoMean, expoLower, expoUpper);
+				int lenEst = ran.unifRan(expoLower, expoUpper);	//use uniform distribution temporarily for real gene
 				out.write(Integer.toString(startPos));
 				out.write(".");
 		        out.write(Integer.toString(lenEst));

@@ -315,11 +315,12 @@ public class D2 {
 				for (int k=0; k<len; k++) {	// if boundOfWord changes, we have to change here.
 					for (int k1=0; k1<len; k1++) {
 						for (int k2=0; k2<len; k2++) {
+							for (int k3=0; k3<len; k3++) {
 							StringBuffer tmpWord = new StringBuffer();
-							tmpWord.append(alphabet[i]).append(alphabet[j]).append(alphabet[k]).append(alphabet[k1]).append(alphabet[k2]);
+							tmpWord.append(alphabet[i]).append(alphabet[j]).append(alphabet[k]).append(alphabet[k1]).append(alphabet[k2]).append(alphabet[k3]);
 							words[index] = tmpWord.toString();
 							index++;
-							
+							}
 						}
 					}
 				}
