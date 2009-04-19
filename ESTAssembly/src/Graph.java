@@ -1,3 +1,7 @@
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
 
@@ -83,6 +87,59 @@ public class Graph {
 		return mst;
 	}
 	
+	/*
+	 * read a minimum spanning tree from the input MST file
+	 */
+	public WeightedAdjacencyListGraph readMST(String inFileName) {
+		int nOfNodes = graphNodes.size();
+		int[][] nodes = new int[nOfNodes-1][3];	//store edges in MST, there are n-1 edges, n is number of nodes.
+
+		//read mst from the input file
+		boolean bExists = false;
+		try{ 
+			File f = (new File(inFileName));
+			bExists = f.exists();
+			if (!bExists) {
+				System.out.println("File does not exist!");
+				return null;
+			}
+
+			BufferedReader in = new BufferedReader(new FileReader(f));
+			String str = in.readLine();
+			int curIndex = 0;
+			while (str != null) {
+				str = str.trim();
+				if (str.charAt(0) != '#') {	//comment line begins from '#'
+					String[] paras = str.split(",");
+					if (Integer.parseInt(paras[0]) != -1) {	//-1 means root of MST
+						int i0 = Integer.parseInt(paras[0]);
+						int i1 = Integer.parseInt(paras[1]);
+						int i2 = Integer.parseInt(paras[2]);
+						nodes[curIndex][0] = i0;
+						nodes[curIndex][1] = i1;
+						nodes[curIndex][2] = i2;
+						curIndex++;
+					}
+				} 
+				str = in.readLine();
+			}
+			in.close();			
+		}catch(IOException e){ 
+			System.out.println(e.toString());
+			return null;
+		}
+		
+		// Make a undirected MST.
+		WeightedAdjacencyListGraph mst = 
+			new WeightedAdjacencyListGraph(nOfNodes, false);
+		for (int i=0; i<nOfNodes; i++) {	//i is the index of the node in graph
+			mst.addVertex(i, Integer.toString(i));
+		}
+		for (int j=0; j<nodes.length; j++) {
+			mst.addEdge(nodes[j][0], nodes[j][1], nodes[j][2]);
+		}
+		return mst;
+	}
 	/**
 	 * Get two closest nodes which is on the left and on the right to every node 
 	 * from the input minimum spanning tree, and store the data into an array.

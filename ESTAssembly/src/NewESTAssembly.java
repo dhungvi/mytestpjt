@@ -362,7 +362,9 @@ public class NewESTAssembly extends ESTAssembly{
 
 		assemble.readEstFile();
 		assemble.createAlignArray();
+		System.out.println("Start to process 6-tuples.");
 		assemble.processAlignArray();
+		System.out.println("End to process 6-tuples.");
 		assemble.printSPos();
 		assemble.printConsensus();
 		assemble.printEsts();
