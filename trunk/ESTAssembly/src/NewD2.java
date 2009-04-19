@@ -41,7 +41,24 @@ public class NewD2 extends D2{
 	 * If s2 is included in s1, the distance is INT_MAX.
 	 * If s1 is included in s2, the distance is INT_MAX.
 	 */
-	protected int[] getOVLDistance(String s1, String s2) {
+	protected int[] getOVLDistance(String tS1, String tS2) {
+		String s1 = "";
+		String s2 = "";
+		int flag = 1;	//1 - no switch for tS1 and tS2; -1 - switch.
+		/*
+		 * put the shorter string to s1 and the longer one to s2 in 
+		 * order to identify inclusion. Now we just need to identify the
+		 * situation when s1 is included in s2. 
+		 */
+		if (tS1.length() > tS2.length()) {
+			s1 = tS2;
+			s2 = tS1;
+			flag = -1; //tS1 and tS2 are switched
+		} else {
+			s1 = tS1;
+			s2 = tS2;
+		}
+		
 		int[] returnValues = new int[2];
 		String leftWindow = s1.substring(0, windowSize);
 		String rightWindow = s1.substring(s1.length()-windowSize);
@@ -60,7 +77,7 @@ public class NewD2 extends D2{
  			int tLenOverlap = s2.length() - lPos; 
 	 		int tmpDis = INT_MAX;
 			if (tLenOverlap > s1.length()) {	//if s1 is included in s2
-				tmpDis = this.getDistance(s1.substring(0, s1.length()), s2.substring(lPos));
+				tmpDis = this.getDistance(s1.substring(0, s1.length()), s2.substring(lPos, lPos+s1.length()));
 				tLenOverlap = s1.length();
 			} else {
 				tmpDis = this.getDistance(s1.substring(0, tLenOverlap), s2.substring(lPos));
@@ -79,7 +96,7 @@ public class NewD2 extends D2{
 
 	 		int tmpDis = INT_MAX;
 			if (lenInS1 < 0) {	//if s1 is included in s2
-				tmpDis = this.getDistance(s1.substring(0), s2.substring(0, tLenOverlap));
+				tmpDis = this.getDistance(s1.substring(0), s2.substring(tLenOverlap-s1.length(), tLenOverlap));
 				tLenOverlap = s1.length();
 			} else {
 				tmpDis = this.getDistance(s1.substring(lenInS1), s2.substring(0, tLenOverlap));
@@ -93,32 +110,22 @@ public class NewD2 extends D2{
 		
 		// compare disLeft and disRight, select the one with smaller value.
 		if (disLeft < disRight) {
-			ovlDis = -1 * disLeft;	//minus represents that s2 is to the left of s1
-			lenOverlap = -1 * lLenOverlap;
+			ovlDis = -1 * disLeft * flag;	//minus represents that s2 is to the left of s1
+			lenOverlap = -1 * lLenOverlap * flag;
 		} else {
-			ovlDis = disRight;	//s2 is to the right of s1
-			lenOverlap = rLenOverlap;
+			ovlDis = disRight * flag;	//s2 is to the right of s1
+			lenOverlap = rLenOverlap * flag;
 		} 
 			
-		/*if s2 is included in s1, we will ignore s2 by assigning INT_MAX to the overlap distance.
-		 * Here, we only judge two situations: s1: s_1 ... e_1; s2: s'_1 ... e'_1.
-		 * 		s_1 = s'_1, or e_1 = e'_1.
-		 * If s'_1<s_1 and e'_1>e_1, their ovl distance would be INT_MAX according to above program.
-		 */
-		if ((Math.abs(lenOverlap) == s2.length()) && 
-				(s2.length() <= s1.length()) && 
-				((disRight <= InclusionThreshold)||	(Math.abs(disLeft) <= InclusionThreshold))) {
-			lenOverlap = 0;
-			ovlDis = INT_MAX;
-		}
-		
-		/*if s1 is included in s2, we will also ignore s2 by assigning INT_MAX to the overlap distance.
+		/*if s1 is included in s2, we will ignore s2 by assigning INT_MAX to the overlap distance.
+		 * We do not need to consider that s1 includes s2 because we have switched them at the beginning 
+		 * of this function if s1 is longer than s2.
 		 * 
 		 * Note: if ovlWindowSize > length of s1, disRight and disLeft would not be equal to zero.
 		 */
 		if ((Math.abs(lenOverlap) == s1.length()) && 
 				(s1.length() <= s2.length()) && 
-				((disRight <= InclusionThreshold)||	(Math.abs(disLeft) <= InclusionThreshold))) {
+				((disRight <= InclusionThreshold)&&	(Math.abs(disLeft) <= InclusionThreshold))) {
 			lenOverlap = 0;
 			ovlDis = INT_MAX;
 		}
@@ -207,7 +214,7 @@ public class NewD2 extends D2{
 	private int getSimlarityScore(String s1, String s2) {
 		int match = 1;
 		int mismatch = -1;
-		int gap = -1;
+		int gap = -2;
 		NeedlemanWunsch algorithm = new NeedlemanWunsch();
 		BasicScoringScheme scoring = new BasicScoringScheme(match, mismatch, gap);
 		algorithm.setScoringScheme(scoring);
@@ -242,13 +249,13 @@ public class NewD2 extends D2{
 		}
 		
 		NewD2 d2 = new NewD2(props);
-		String s1 = "CTATTAAAGTGATCGACACCAACAACCATCGTCCCCAGTTTTCTAAACCAAAGTATGAAGTGGATG";
-		String s2 = "TTTTCTAAACCAAAGTATGAAGTGGATGTCTCTGAGGACACCCCACCTGAG";
+		String s2 = "GTGCAGGGAACGACTGGAGTAGTGTGGCTGAGGCAGCCGCTCGACAGAGAGGCCAAGTCAGAGATGCAGGTGGAGTTCACTGTGAGCGACAGTCAAGGGGTTGTCAAGGATACAGTGAACATTCtGATCaGGGACGTAAATGACAATGCTCCATCATTTTACAACCAACCCTATGCCATTCAGATACCAGAGAACACTCCAGTAGGGACGTCAGTGTTCATGGTGAATGCGACAGACCCAGATCAAGGAGTCGGAGGCAGCGTCTTGTTCTCCTTCCAGCCTCCCTCTCAGTTCTTCTCTATTGACGGAGCCAGAGGAATCGTCAgTGTgACCAtAG";
+		String s1 = "TGGTCGGGGAAGAGGCCATgCGCTACTTTGCTGTGCAGGGAACGACTGGAGTAGTGTGGCTGAGGCAGCCGCTCGACAGAGAGGCCAAGTCAGAGATGCAGGTGGAGTTCACTGTGAGCGACAGTCAAGGGGTTGTCAAGGATACAGTGAACATTCAGATCGGGGACGTAAATGACAATGCTCCATCATTTTACAACCAACCCTATGCCATTCAGATACCAGAGcACACTCCAGTAGGGACGTCAGTGTTCATGcTGAATGCGACAGACCCAGATCAAGGAGTCGGAGGCAGCGTCTTGTTCTCCTTCCAGCCTCCCTCaCAGTTCTTCTCTATTGACGGAGCCAGAGGAATCGTCACTGTGACCAGAGCGCTGGACTATGAGACAACTATTGCATATCAGCTCACCGTTAATGCCACGGACCAGGATAAACGGCGTCCTCTCTCTAGTCTGGCTAATTTGGCGATTACCATCACTGATATTCAAGACATGGACCCCATCTTCACCAACCTCCCCTACAcCACTA";
 		System.out.println(d2.getSimlarityScore(s1,s2));
 		//System.out.println(d2.getDistance(s1,s2));
-		//int tmp[] = new int[2];
-		//tmp = d2.getOVLDistance(s1, s2);
-		//System.out.println(tmp[1] + " " + tmp[0]);
+		int tmp[] = new int[2];
+		tmp = d2.getOVLDistance(s1, s2);
+		System.out.println(tmp[1] + " " + tmp[0]);
 
 	}
 

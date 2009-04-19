@@ -15,6 +15,7 @@ public class ESTAssembly {
 	int INT_MAX = 2147483647;
 	int INT_MIN = -2147483647;
 	String oriFileName;	//store the original gene data. It's used in "printEsts" method.
+	String mstFile;	//store the MST. It is generated from PEACE.
 	String inFileName;
 	String resultFileName;
 	String consensusFileName;
@@ -38,6 +39,7 @@ public class ESTAssembly {
 	
 	public ESTAssembly(Properties props) {
 		oriFileName = props.getProperty("SourceFile");
+		mstFile = props.getProperty("MSTFile");
 		inFileName = props.getProperty("OutFile");
 		resultFileName = props.getProperty("ResultFile");
 		consensusFileName = props.getProperty("ConsensusFile");
@@ -51,6 +53,19 @@ public class ESTAssembly {
 	 * Read ests from the input file;
 	 * Generate a Graph object, all the ests are considered to be one node in the graph;
 	 * No edge in the graph. Edges will be added in "createAlignArray" function.
+	 * 
+	 * FASTA format:
+	 * A sequence in FASTA format begins with a single-line description, followed by lines of 
+	 * sequence data. The description line is distinguished from the sequence data by a greater-than
+	 * (">") symbol in the first column. The word following the ">" symbol is the identifier of the 
+	 * sequence, and the rest of the line is the description (both are optional). There should be no 
+	 * space between the ">" and the first letter of the identifier. It is recommended that all lines 
+	 * of text be shorter than 80 characters. The sequence ends if another line starting with a ">" 
+	 * appears; this indicates the start of another sequence.
+	 * 
+	 * EST file comment format:
+	 * >g001_001169_001679: first one is number of gene, second is index of tarting position, third is 
+	 * 						index of ending position. Index starts from 0.
 	 */
 	protected void readEstFile() {
 		boolean bExists = false;
@@ -64,22 +79,33 @@ public class ESTAssembly {
 			}
 
 			BufferedReader in = new BufferedReader(new FileReader(f));
-			String str;
-			while ((str = in.readLine()) != null) {
+			String str = in.readLine();
+			while (str != null) {
+				str = str.trim();
 				// first line is comment line which begins from '>'
 				if (str.charAt(0) == '>') {	//comment line begins from '>'
-					ests.add(str.substring(1, str.indexOf(".")));
-					str = in.readLine();	//get est in the next line
-					ests.add(str);
-				} 
-				/*if (str.charAt(0) != '>') {	//comment line begins from '>'
-					estStr.append(str);
-				} else {
-					if (estStr.toString().compareTo("") != 0) {
-						ests.add(estStr.toString());
-						estStr = new StringBuffer();
+					String[] paras = str.split("_");
+					ests.add(paras[1]);
+					
+					//get est in the next lines
+					str = in.readLine();
+					StringBuffer estStr = new StringBuffer();
+					while (str != null) {
+						str = str.trim();
+						if (str.compareTo("") != 0)	{
+							if (str.charAt(0) != '>') {
+								estStr.append(str.trim());
+							} else  {
+								ests.add(estStr.toString());
+								break;
+							}
+						}
+						str = in.readLine();
 					}
-				}*/
+					if (str == null) {
+						ests.add(estStr.toString());
+					}
+				} 
 			}
 			in.close();			
 		}catch(IOException e){ 
@@ -93,13 +119,13 @@ public class ESTAssembly {
 			g.addNode(new Node(ests.get(i), ests.get(i+1)));
 			i = i+2;
 		}
-
 	}
 	
 	public void createAlignArray() {
 		//alignArray = g.alignNodes();	
 		System.out.println("Start to generate MST.");
-		mstForG = g.genMST();
+		//mstForG = g.genMST();
+		mstForG = g.readMST(mstFile);
 		System.out.println("End to generate MST.");
 		System.out.println("Start to generate 6-tuples.");
 		alignArray = g.get2CloseNodesFromMST(mstForG);
