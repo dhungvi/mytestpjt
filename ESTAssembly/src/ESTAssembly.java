@@ -116,7 +116,8 @@ public class ESTAssembly {
 		//generate a graph from the input file
 		int i=0;
 		while (i<ests.size()) {
-			g.addNode(new Node(ests.get(i), ests.get(i+1)));
+			//the sequence is upper-case
+			g.addNode(new Node(ests.get(i), ests.get(i+1).toUpperCase()));
 			i = i+2;
 		}
 	}
