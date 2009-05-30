@@ -104,6 +104,8 @@ public class NewGraph extends Graph{
 			alignedNodes[i][3] = rightNode;	//index of node on the right
 			alignedNodes[i][4] = overlapRight;	//overlap length
 			alignedNodes[i][5] = minRight;	//overlap distance
+			
+			System.out.println("Get 6-tuple for node "+i);
 		}
 		return alignedNodes;
 	}
@@ -123,6 +125,7 @@ public class NewGraph extends Graph{
 	 * 
 	 * @param mst a Minimum Spanning Tree.
 	 * @param index The index of current node in the tree and graph.
+	 * @param sixTuple The six tuple for this node with the index
 	 * @return an array which stores two closest nodes which is to the left and to the right 
 	 * respectively for all the nodes in the tree. 
 	 * 		1st-dimension: index of nodes in the graph 'graphNodes';
@@ -133,7 +136,7 @@ public class NewGraph extends Graph{
 	 * 						For the first and fourth one, if no node is found, the value is -1;
 	 * 						For others, if no node is found, the value is infinite.
 	 */
-	public int[] get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index) {
+	public int[] get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, int[] sixTuple) {
 		/*
 		 * store the position of aligned nodes
 		 * 1st-dimension: index of nodes in graph;
@@ -146,18 +149,22 @@ public class NewGraph extends Graph{
 		
 		int leftNode = -1;
 		int rightNode = -1;
-		int maxLeft = INT_MIN;	//maximum left distance because left distance is negative
-		int minRight = INT_MAX;	//minimum right distance
-		int overlapLeft = 0;
-		int overlapRight = 0;
+		//int maxLeft = INT_MIN;	//maximum left distance because left distance is negative
+		//int minRight = INT_MAX;	//minimum right distance
+		//int overlapLeft = 0;
+		//int overlapRight = 0;
+		int maxLeft = sixTuple[2];
+		int minRight = sixTuple[5];
+		int overlapLeft = sixTuple[1];
+		int overlapRight = sixTuple[4];
 		
-		//put all the parents,grandparents,children,grand-children nodes into an arraylist.
+		//put all the parents,grandparents,children,grand-children nodes into an arraylist. Do not 
+		// include parents and children because they have been processed.
 		ArrayList<Vertex> allNodes = new ArrayList<Vertex> ();
 		WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(index);
 		while (ite.hasNext()) {
 			Vertex v = (Vertex) ite.next();
-			allNodes.add(v);
-			//debugNodesL1.add(v);
+			//allNodes.add(v);
 			int index2 = v.getIndex();
 			WeightedEdgeIterator ite2 = (WeightedEdgeIterator) mst.edgeIterator(index2);
 			while (ite2.hasNext()) {
@@ -178,13 +185,11 @@ public class NewGraph extends Graph{
 		}
 		
 		//find two closest nodes
+		String s1 = graphNodes.get(index).getNodeStr();
 		while (!allNodes.isEmpty()) {
 			Vertex tmpV = allNodes.remove(0);
 			int tmpIndex = tmpV.getIndex();
-			String s1 = graphNodes.get(index).getNodeStr();
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
-			//int d2Dis = d2.getD2Distance(s1, s2);
-			//int[] ovlDis = d2.getOVLDistance(s1, s2, d2Dis);
 			int[] ovlDis = ((NewD2)d2).getOVLDistance(s1, s2);
 			
 			//if (ovlDis[0] != 0) {	// there is overlap between them
@@ -223,6 +228,7 @@ public class NewGraph extends Graph{
 		closeNode[4] = overlapRight;	//overlap length
 		closeNode[5] = minRight;	//overlap distance
 		
+		System.out.println("Get 6-tuple for node "+index);
 		return closeNode;
 	}
 

@@ -111,6 +111,29 @@ public class SmithWaterman extends PairwiseAlignmentAlgorithm
 	 */
 	protected int max_col;
 
+	/*
+	 * added by yuan
+	 * constructor: load two strings
+	 */
+	public void loadSequences(String s1, String s2) {
+		// when new sequences are loaded, the
+		// alignment and score needs to be recomputed
+		super.alignment = null;
+		super.score_computed = false;
+
+		// make sure that if an exception is raised
+		// the sequences_loaded flag is false
+		super.sequences_loaded = false;
+
+		// request subclasses to load sequences
+		this.seq1 = new CharSequence(s1);
+		this.seq2 = new CharSequence(s2);
+
+		// if no exception is raised,
+		// set the loaded flag to true
+		super.sequences_loaded = true;
+	}
+
 	/**
 	 * Loads sequences into {@linkplain CharSequence} instances. In case of any error, an
 	 * exception is raised by the constructor of <CODE>CharSequence</CODE> (please check

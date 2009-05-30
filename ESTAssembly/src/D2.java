@@ -2,9 +2,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Properties;
-
-
 
 /**
  * This class implements the D2 algorithm. Feb 15, 2009.
@@ -34,7 +36,11 @@ public class D2 {
 	private char[] alphabet = new char[]{'A', 'T', 'C', 'G'};	// alphabet of the two compared strings
 	private int[][] v2Array;//	the array is used to store all the frequency 
 							//	of all the possible words for all the windows in s2 (the second string).
-	private String[] words;	// store all the possible words.
+	//private String[] words;	// store all the possible words.
+	class ValObj {
+		int v1, v2;
+	}
+	private Map<String, ValObj> words = new HashMap<String, ValObj>();
 	
 	public D2(Properties props) {
 		windowSize = Integer.parseInt(props.getProperty("windowSize"));
@@ -56,8 +62,9 @@ public class D2 {
 	 * @param s1 String the first string, s2 String the second string.
 	 * @return >=0 the distance; -1 length of s1 or s2 is less than the window size.
 	 */
+	
 	public int getD2Distance(String s1, String s2) {
-		if ((s1.length() < windowSize) || (s2.length() < windowSize)) {
+/*		if ((s1.length() < windowSize) || (s2.length() < windowSize)) {
 			System.out.println("The length of input string is less than the window size!");
 			return -1;
 		}
@@ -88,7 +95,100 @@ public class D2 {
 		if (minSed > THRESHOLD) {
 			minSed = INT_MAX;
 		}
-		return minSed;
+		return minSed;*/
+		return 0;
+	}
+	
+	
+	/**
+	 * Get the window position in string 's2' such that the d2 distance between the two input string is minimal. 
+	 * If multiple positions are found, the function will return all of them.
+	 * If no position is found, the function will return an empty array.	 
+	 * 
+	 * @param s1 String the first string with the length of windonwSize, s2 String the second string.
+	 * @return an Object array.
+	 */
+	public Object[] getD2Sed(String s1, String s2) {
+		ArrayList<Integer> aPos = new ArrayList<Integer> ();
+		
+		int minSed = INT_MAX;	//minSed is initialized to the maximum value of int
+		/*int[] v1 = getFreqInWindow(s1);
+		int[] v2 = getFreqInWindow(s2.substring(0, windowSize));
+		*/
+		int initSed = getInitSed(s1, s2.substring(0, windowSize));
+		
+		int l = s2.length() - windowSize + 1;
+		int[] disArray = new int[l];	//store value of d2Dis for all the windows in s2.
+
+		/*int sed = 0;
+		for (int j=0; j<v2.length; j++) {
+			for (int k=0; k<words.length; k++) {
+				sed = sed + (v1[k] - v2[k]) * (v1[k] - v2[k]);
+			}
+		}*/
+		
+		if (initSed > THRESHOLD) {
+			disArray[0] = INT_MAX;
+		} else {
+			disArray[0] = initSed;
+		}
+		if (initSed < minSed) {
+			minSed = initSed;
+		} 
+		
+		for (int i=1; i<l; i++) {
+			String firstWord = s2.substring(i-1, i-1+boundOfWord);
+			String lastWord = s2.substring(i+windowSize-boundOfWord, i+windowSize);
+			/*for (int j=0; j<words.length; j++) {
+				if (words[j].equalsIgnoreCase(firstWord)) {
+					v2[j]--;
+				}
+				
+				if (words[j].equalsIgnoreCase(lastWord)) {
+					v2[j]++;
+				}
+			}
+			for (int j=0; j<v2.length; j++) {
+				for (int k=0; k<words.length; k++) {
+					sed = sed + (v1[k] - v2[k])* (v1[k] - v2[k]);
+				}
+			}*/
+			
+			ValObj vo = words.get(firstWord);
+			//System.out.println("firstWord = " + firstWord);
+			
+			int orgFirstValue = (int)Math.pow((vo.v1 - vo.v2), 2);
+			vo.v2 -= 1;
+			int sed = initSed - orgFirstValue + (int)Math.pow((vo.v1 - vo.v2), 2);
+			
+			vo = words.get(lastWord);
+			if (vo == null) System.out.println("lastWord = " + lastWord);
+			int orgLastValue = (int)Math.pow((vo.v1 - vo.v2), 2);
+			vo.v2 += 1;
+			sed = sed - orgLastValue + (int)Math.pow((vo.v1 - vo.v2), 2);
+			
+			if (sed > THRESHOLD) {
+				disArray[i] = INT_MAX;
+			}else {
+				disArray[i] = sed;
+			}
+			if (sed < minSed) {
+				minSed = sed;
+			} 
+			initSed = sed;
+		}
+		
+		// get positions with the value of minSed
+		if (minSed < INT_MAX) {
+			for (int i=0; i<disArray.length; i++) {
+				if (minSed == disArray[i]) {
+					aPos.add(Integer.valueOf(i));
+				}
+			}
+		}
+
+		Object[] positions = aPos.toArray();
+		return positions;
 	}
 
 	/**
@@ -111,7 +211,7 @@ public class D2 {
 	 * If s1 is included in s2, the distance is INT_MAX.
 	 */
 	public int[] getOVLDistance(String s1, String s2, int d2Dis) {
-		int[] returnValues = new int[2];
+		/*int[] returnValues = new int[2];
 		String leftWindow = s1.substring(0, windowSize);
 		String rightWindow = s1.substring(s1.length()-windowSize);
 		//int[] leftPos = getWindowPos(leftWindow, s2, d2Dis);
@@ -175,7 +275,7 @@ public class D2 {
 			THRESHOLD = oldThreshold;
  		}
 
-		/*
+		
  		// if both leftPos[0] and leftPos[1] are -1, disLeft will be kept to be INT_MAX.
    		if (leftPos[1] != -1) {	// first consider the right-most position in s2
 			lenOverlap = s2.length() - leftPos[1]; 
@@ -220,7 +320,7 @@ public class D2 {
 			}
 			windowSize = oldWindowSize;	//recover the windowsize
 			THRESHOLD = oldThreshold;
-		} */
+		} 
 		
 		// compare disLeft and disRight, select the one with smaller value.
 		if (disLeft < disRight) {
@@ -231,11 +331,11 @@ public class D2 {
 			lenOverlap = rLenOverlap;
 		} 
 			
-		/*if s2 is included in s1, we will ignore s2 by assigning INT_MAX to the overlap distance.
+		if s2 is included in s1, we will ignore s2 by assigning INT_MAX to the overlap distance.
 		 * Here, we only judge two situations: s1: s_1 ... e_1; s2: s'_1 ... e'_1.
 		 * 		s_1 = s'_1, or e_1 = e'_1.
 		 * If s'_1<s_1 and e'_1>e_1, their ovl distance would be INT_MAX according to above program.
-		 */
+		 
 		if ((Math.abs(lenOverlap) == s2.length()) && 
 				(s2.length() <= s1.length()) && 
 				((disRight == InclusionThreshold)||	(Math.abs(disLeft) == InclusionThreshold))) {
@@ -243,10 +343,10 @@ public class D2 {
 			ovlDis = INT_MAX;
 		}
 		
-		/*if s1 is included in s2, we will also ignore s2 by assigning INT_MAX to the overlap distance.
+		if s1 is included in s2, we will also ignore s2 by assigning INT_MAX to the overlap distance.
 		 * 
 		 * Note: if ovlWindowSize > length of s1, disRight and disLeft would not be equal to zero.
-		 */
+		 
 		if ((s1.length() <= s2.length()) && 
 				(disRight == disLeft) &&
 				(disRight == InclusionThreshold)) {
@@ -257,6 +357,8 @@ public class D2 {
 		returnValues[0] = lenOverlap;
 		returnValues[1] = ovlDis;
 		return returnValues;
+		*/
+		return null;
 	}
 
 	/**
@@ -271,7 +373,7 @@ public class D2 {
 	 * @param w String the first string, s2 String the second string, d2Dis int d2 distance.
 	 * @return an Integer array with two elements.
 	 */
-	private Object[] getWindowPos(String w, String s2, int d2Dis) {
+	/*private Object[] getWindowPos(String w, String s2, int d2Dis) {
 		ArrayList<Integer> aPos = new ArrayList<Integer> ();
 		//int[] positions = new int[] {-1, -1};
 		//int index = 0;	//index of positions
@@ -290,15 +392,15 @@ public class D2 {
 			
 			if (sed == d2Dis) {
 				aPos.add(Integer.valueOf(j));
-				/*if (index > 1) {	//we only need put two values in the variable 'positions'
+				if (index > 1) {	//we only need put two values in the variable 'positions'
 					index = 1;
 				}
-				positions[index++] = j;*/
+				positions[index++] = j;
 			}
 		}
 		Object[] positions = aPos.toArray();
 		return positions;
-	}
+	}*/
 
 	/**
 	 * Assign values to the class variable words.
@@ -306,7 +408,7 @@ public class D2 {
 	 */
 	private void initWords() {
 		int wLen = (int)java.lang.Math.pow(alphabet.length, boundOfWord);
-		words = new String[wLen];
+		//words = new String[wLen];
 		
 		int index = 0;
 		int len = alphabet.length;
@@ -318,7 +420,10 @@ public class D2 {
 							for (int k3=0; k3<len; k3++) {
 							StringBuffer tmpWord = new StringBuffer();
 							tmpWord.append(alphabet[i]).append(alphabet[j]).append(alphabet[k]).append(alphabet[k1]).append(alphabet[k2]).append(alphabet[k3]);
-							words[index] = tmpWord.toString();
+							//words[index] = tmpWord.toString();
+							String key = tmpWord.toString();
+							ValObj value = new ValObj();
+							words.put(key, value);
 							index++;
 							}
 						}
@@ -335,19 +440,19 @@ public class D2 {
 	 *  @param s String
 	 */
 	private void getVectorsForS2(String s) {
-		initV2(s.length());
+/*		initV2(s.length());
 		int l = s.length() - windowSize + 1;
 		for (int i=0; i<l; i++) {
 			v2Array[i] = getFreqInWindow(s.substring(i, i+windowSize));
-		}
+		}*/
 	}
 	
 	/**
 	 * Initialize the class variable 'v2Array'
 	 */
-	private void initV2(int len) {
+/*	private void initV2(int len) {
 		v2Array = new int[len-windowSize+1][words.length];
-	}
+	}*/
 	
 	/**
 	 * Calculate all the frequency of words for the input string. Return the results as an int array.
@@ -356,7 +461,7 @@ public class D2 {
 	 * @return an array to store the frequency of words
 	 */
 	private int[] getFreqInWindow(String s) {
-		int[] freqArray = new int[words.length];
+		/*int[] freqArray = new int[words.length];
 		for (int i=0; i<words.length; i++) {
 			int sPosition = 0;
 			int num = 0;
@@ -372,10 +477,52 @@ public class D2 {
 			freqArray[i] = num;
 		}
 		
-		return freqArray;
+		return freqArray;*/
+		return null;
 	}
 	
+	private int getInitSed(String s1, String s2sub) {
+		int sed = 0;
+		for (Iterator<String> i = words.keySet().iterator(); i.hasNext(); ) {
+			String key = i.next();
+			
+			int sPosition = 0;
+			int num1 = 0, num2 = 0;
+			while (sPosition < s1.length()) {
+				int tmpIndex = s1.indexOf(key, sPosition);
+				if (tmpIndex != -1 ) {
+					sPosition = tmpIndex + 1;
+					num1++;
+				} else {
+					break;
+				}
+			}
+			sPosition = 0;
+			while (sPosition < s2sub.length()) {
+				int tmpIndex = s2sub.indexOf(key, sPosition);
+				if (tmpIndex != -1 ) {
+					sPosition = tmpIndex + 1;
+					num2++;
+				} else {
+					break;
+				}
+			}
+			//freqArray[i] = num;
+			ValObj vo = words.get(key);
+			vo.v1 = num1;
+			vo.v2 = num2;
+			int tempInt = num1 - num2;
+			sed += Math.pow(tempInt, 2);
+		}
+		return sed;
+	}
+
+	public String[] getLocalAlignment(String s1, String s2) {
+		return null;
+	}
+
 	public static void main(String args[]) {
+		long startTime = new Date().getTime();
 		Properties props = null;
 		try {
 			props = getProperties("config.properties");
@@ -384,14 +531,15 @@ public class D2 {
 	    	return;
 		}
 		
-		D2 d= new D2(props);
-		String s1 = "GTTCTGaCCAAAGTCACAACAATAGGGATAATTGATCCATCCAGAGGAGCTTCGATtGACTATCAACGcGCCCAAGCCAACCTTACCATCAGAgccaatg";
-		String s2 = "GTTCTGaCCAAAGTCACAACAATAGGGATAATTGATCCATCCAGAGGAGCTTCGATtGACTATCAACGcGCCCAAGCCAACCTTACCATCAGAGCCAATG";
-		int dis = d.getD2Distance(s1, s2);
-		int[] dis1 = d.getOVLDistance(s1, s2, dis);
-		System.out.println("d2 distance is: " + dis);
-		System.out.println("length of overlap is: " + dis1[0]);
-		System.out.println("overlap distance is: " + dis1[1]);
+		D2 d = new NewD2(props);
+		String s1 = "TTtcTcTaGCATGAGGGTATTGTAcATGATGCCATGGCATGCTCTTCTTTCCTCAAGTTCAACCCTGAGCTGACCAAAGAACATGCACCTATCCGcAATTCCCTCAGCTGCCAACAAGGTTTTGATGAAAAAGAGAGCAAACTGAAGAACCGGCACTCTCTGGAGATCTCCTCAGCCCTCAACATGTTTAACATATCACCACATGGCCCAGACATTTCCAAGATGGGTAGCATAAACAAGAACAAGGTCCTTTCCATGCTAAAAGAGCCACCCTTGCCTGAGAAGTGTGAGGATGGAAAGGAATCTGTCTCTTATGAGATGACCAGTCACTCCTCCATGAGGTCAAAATCCATTTTgC";
+		String s2 = "CATGCTCTTCTTTCCTCAAGTTCAACCCTGAGCTGACCAAAGAACATGCACCTATCCGcAATTCCCTCAGCTGCCAACAAGGTTTTGATGAAAAAGAGAG";
+		d.getD2Sed(s2.toUpperCase(), s1.toUpperCase());
+		//int[] dis1 = d.getOVLDistance(s1, s2, dis);
+		//System.out.println("d2 distance is: " + dis);
+		//System.out.println("length of overlap is: " + dis1[0]);
+		//System.out.println("overlap distance is: " + dis1[1]);
+		System.out.println(new Date().getTime() - startTime);
 	}
 	
 	//only used for test by main

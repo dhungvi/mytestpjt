@@ -5,6 +5,7 @@ import java.util.Properties;
 import neobio.alignment.BasicScoringScheme;
 import neobio.alignment.IncompatibleScoringSchemeException;
 import neobio.alignment.NeedlemanWunsch;
+import neobio.alignment.SmithWaterman;
 
 public class NewD2 extends D2{
 	
@@ -82,7 +83,7 @@ public class NewD2 extends D2{
 			} else {
 				tmpDis = this.getDistance(s1.substring(0, tLenOverlap), s2.substring(lPos));
 			}
-			if ((tmpDis < disLeft) && (tLenOverlap > lLenOverlap)){ // do we need to use two conditions or just one?
+			if (tmpDis < disLeft){ // && (tLenOverlap > lLenOverlap), do we need to use two conditions or just one?
 				disLeft = tmpDis;
 				lLenOverlap = tLenOverlap;
 			}
@@ -101,7 +102,7 @@ public class NewD2 extends D2{
 			} else {
 				tmpDis = this.getDistance(s1.substring(lenInS1), s2.substring(0, tLenOverlap));
 			}
-			if ((tmpDis < disRight) && (tLenOverlap > rLenOverlap)) {// do we need to use two conditions or just one?
+			if (tmpDis < disRight) {// && (tLenOverlap > rLenOverlap). do we need to use two conditions or just one?
 				disRight = tmpDis;
 				rLenOverlap = tLenOverlap;
 			}
@@ -152,6 +153,7 @@ public class NewD2 extends D2{
 	 * @return an Object array with two elements.
 	 */
 	protected Object[] getWindowPos(String w, String s2) {
+		/*
 		ArrayList<Integer> aPos = new ArrayList<Integer> ();
 		int minDis = INT_MAX;
 		
@@ -177,6 +179,8 @@ public class NewD2 extends D2{
 	
 		Object[] positions = aPos.toArray();
 		return positions;
+		*/
+		return getD2Sed(w, s2);
 	}
 	
 	/*
@@ -188,6 +192,7 @@ public class NewD2 extends D2{
 	 */
 	public int getDistance(String s1, String s2) {
 		int score = getSimlarityScore(s1, s2);
+		//int score = getLocalSimlarityScore(s1, s2);
 /*		if (s1.length() > s2.length()) {
 			length = s1.length();
 		} else {
@@ -206,6 +211,7 @@ public class NewD2 extends D2{
 		}
 		return retVal;
 	}
+
 	/*
 	 * Use Needleman-Wunsch algorithm to calculate similarity score of two string.
 	 * @param s1, s2
@@ -236,8 +242,70 @@ public class NewD2 extends D2{
 		}
 		return score;
 	}
+
+	/*
+	 * Use Smith-Waterman algorithm to calculate similarity score of two string.
+	 * @param s1, s2
+	 * @return int similarity score(>=0), if the value is less than 0, it's set to be zero.
+	 */
+	private int getLocalSimlarityScore(String s1, String s2) {
+		int match = 1;
+		int mismatch = -1;
+		int gap = -2;
+		SmithWaterman algorithm = new SmithWaterman();
+		BasicScoringScheme scoring = new BasicScoringScheme(match, mismatch, gap);
+		algorithm.setScoringScheme(scoring);
+		algorithm.loadSequences(s1, s2);
+		
+		int score = INT_MAX;
+		try {
+			score = algorithm.getScore();
+			//System.out.println(algorithm.getPairwiseAlignment().getGappedSequence1());
+			//System.out.println(algorithm.getPairwiseAlignment().getGappedSequence2());
+			//System.out.println(algorithm.getPairwiseAlignment());
+			//String tmp = algorithm.getPairwiseAlignment().toString();
+			//System.out.println(tmp);
+		} catch (IncompatibleScoringSchemeException e) {
+			// TODO Auto-generated catch block
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		if (score < 0) {
+			score = 0;
+		}
+		return score;
+	}
+
+	/*
+	 * Use Smith-Waterman algorithm to calculate similarity score of two string.
+	 * @param s1, s2
+	 * @return string[], [0] and [1] are the two aligned sequences, [2] is the pairwise alignment.
+	 */
+	public String[] getLocalAlignment(String s1, String s2) {
+		int match = 1;
+		int mismatch = -1;
+		int gap = -2;
+		SmithWaterman algorithm = new SmithWaterman();
+		BasicScoringScheme scoring = new BasicScoringScheme(match, mismatch, gap);
+		algorithm.setScoringScheme(scoring);
+		algorithm.loadSequences(s1, s2);
+		String[] strs = new String[3];
+		
+		try {
+			strs[0] = algorithm.getPairwiseAlignment().getGappedSequence1();
+			strs[1] = algorithm.getPairwiseAlignment().getGappedSequence2();
+			strs[2] = algorithm.getPairwiseAlignment().toString();
+		} catch (IncompatibleScoringSchemeException e) {
+			// TODO Auto-generated catch block
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		return strs;
+	}
+
 	/**
 	 * @param args
+	 * @throws InterruptedException 
 	 */
 	public static void main(String[] args) {
 		Properties props = null;
@@ -249,12 +317,16 @@ public class NewD2 extends D2{
 		}
 		
 		NewD2 d2 = new NewD2(props);
-		String s1 = "TTCACAGAACTCTTTAATGCGGGAGGTGGAAGAGCTGCAGTCTGATAATCCTGTATCTCTAAGCATCGAGAGGAGAAGAGGCAGGTTTGGCAGACTAACTGTACACTGGAGCGCCTACGGAAGTCTGGATGACATTTTTCCCACTTCAGGAGTGGTGACATTTTCTGAGAGCCAGGCTGTGGCTACCATCgCATTGAATGTGTTAGCTGACGACATTCCAGAGTTGGCAGAAAAAGTCACCATTGTTCTGACCAAAGTCACAACAATAGGGATAATTGATCCAtCCAGAGGAGCTTCGATTGACTATCAACGCGCCCAAGCCAACCTTACCATCAGAGCCAATGaTTCACaccATGGAGT";
-		String s2 = "ACCtCAAAGGAGGAGCTGAGATTGGTTTTCGTGGTCAAGTGACCTTCTTCATCCCAGCTAATGATGACACTTATgGAATTATAGGGTTTTCACAGAACTCTTTAATGCGGGAGGTGGAAGAGCTGCAGTCTGATAATCCTgTATCTCTAAGCATCGAGAGGAaAAGAGGCAGGTTTGGCAGACTAACTGTACACTGGAGCGCCTACGGAAGTCTGGATGACATTTTTaCCACTTCAGGAGTGGTGACATTTTCTGAGAGCCAGGCTGTGGCTACCATCTCATTGAATGTGTTAGCTGACGACATTCCAGAGTTGGCAGAAAAAGTCACCATTGTTCTGaCCAAAGTCACAACAATAGGGATAATTGATCCATCCAGAGGAGCTTCGATtGACTATCAACGcGCCCAAGCCAACCTTACCATCAGAGCCAATGGTTCACCCTATGGAGTCATTGGCTGGCACCTTGATTCTCAGTACTTCATCACACCAGaACCTCAAAAGAGCCCAAGCAATATTACACTAAGTATTGTGAGAGATCAAGGATCATCTGGGAATGTATTAtTCTACTACTCCACC";
+		String s1 = "ATCAATGCACATTCCCAAAGACAGAgAGACACTCTTACCACCTTCAGCATCCcTCG";
+		String s2 = "TCAATGCACATTCCCAAAGACAAcAGACACTCATTACCACCTTCAGCACCcTCGA";
 		System.out.println(d2.getSimlarityScore(s1,s2));
+		System.out.println(d2.getLocalSimlarityScore(s1,s2));
+
 		//System.out.println(d2.getDistance(s1,s2));
+		s1 = s1.toUpperCase();
+		s2 = s2.toUpperCase();
 		int tmp[] = new int[2];
-		tmp = d2.getOVLDistance(s1, s2);
+		//tmp = d2.getOVLDistance(s1, s2);
 		System.out.println(tmp[1] + " " + tmp[0]);
 
 	}
