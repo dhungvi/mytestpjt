@@ -225,6 +225,7 @@ public class Graph {
 	 * 
 	 * @param mst a Minimum Spanning Tree.
 	 * @param index The index of current node in the tree and graph.
+	 * @param sixTuple It is used in the same-name method of child class, not here. 
 	 * @return an array which stores two closest nodes which is to the left and to the right 
 	 * respectively for all the nodes in the tree. 
 	 * 		1st-dimension: index of nodes in the graph 'graphNodes';
@@ -233,7 +234,7 @@ public class Graph {
 	 * 						For the first and third one, if no node is found, the value is -1;
 	 * 						For the second and fourth one, if no node is found, the value is infinite.
 	 */
-	public int[] get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index) {
+	public int[] get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, int[] sixTuple) {
 		/*
 		 * store the position of aligned nodes
 		 * 1st-dimension: index of nodes in graph;

@@ -5,8 +5,11 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.Properties;
 
+import com.mhhe.clrs2e.MergeSort;
 import com.mhhe.clrs2e.Prim;
 import com.mhhe.clrs2e.Vertex;
 import com.mhhe.clrs2e.WeightedAdjacencyListGraph;
@@ -42,33 +45,39 @@ public class NewESTAssembly extends ESTAssembly{
 		}
 		//find the two most closest nodes for those leftmostnodes(because some of them may be falsely left-most)
 		int numOfLeftMostNodes = leftMostNodes.size();
+		System.out.println("The number of original left ends is " + numOfLeftMostNodes);
 		if (numOfLeftMostNodes > 1) {
 			for (int i=0; i<leftMostNodes.size(); i++) {
 				int cNode = leftMostNodes.get(i).intValue();
 				//int[] lNode = g.get2CloseNodes(cNode);
-				int[] lNode = g.get2CloseNodesFromGrand(mstForG, cNode);
+				int[] lNode = g.get2CloseNodesFromGrand(mstForG, cNode, alignArray[cNode]);
 				alignArray[cNode][0] = lNode[0];
 				alignArray[cNode][1] = lNode[1];	//overlap length
 				alignArray[cNode][2] = lNode[2];	//distance
-				alignArray[cNode][3] = lNode[3];
-				alignArray[cNode][4] = lNode[4];
-				alignArray[cNode][5] = lNode[5];
+				
+				if (alignArray[cNode][5] > lNode[5]) { //get a smaller distance
+					alignArray[cNode][3] = lNode[3];
+					alignArray[cNode][4] = lNode[4];
+					alignArray[cNode][5] = lNode[5];
+				}
 			}
 		} 
 		
 		//find the two most closest nodes for those rightmostnodes(because we need these information to make a directed maximum spanning tree)
-		for (int i=0; i<alignArray.length; i++) {
+		/*for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][3] == -1) {
 				//int[] rNode = g.get2CloseNodes(i);
-				int[] rNode = g.get2CloseNodesFromGrand(mstForG, i);
-				alignArray[i][0] = rNode[0];
-				alignArray[i][1] = rNode[1];
-				alignArray[i][2] = rNode[2];
+				int[] rNode = g.get2CloseNodesFromGrand(mstForG, i, alignArray[i]);
+				if (Math.abs(alignArray[i][2]) > Math.abs(rNode[2])) { //get a smaller distance
+					alignArray[i][0] = rNode[0];
+					alignArray[i][1] = rNode[1];
+					alignArray[i][2] = rNode[2];
+				}
 				alignArray[i][3] = rNode[3];			
 				alignArray[i][4] = rNode[4];
 				alignArray[i][5] = rNode[5];			
 			}
-		} 
+		} */
 
 		/* construct a directed graph from alignArray, 
 		 *  	the second dimension has two elements:
@@ -236,12 +245,101 @@ public class NewESTAssembly extends ESTAssembly{
 		}
 		System.out.println();
 	}
+	
+	/*
+	 * reconstruct the sequence
+	 */
+	public String reconstruct() {
+		//sort the array sPos
+		StartPos[] resultArray = new StartPos[sPos.length]; //store the starting positions of ests
+		for (int i=0; i<sPos.length; i++) {
+			resultArray[i] = new StartPos(sPos[i], g.getSeqOfNode(i));
+		}
+		MergeSort merge = new MergeSort();
+		merge.sort(resultArray);
+
+		//local align every two adjacent nodes, e.g, node 1 and 2, node 2 and 3..., node i-1 and node i.
+		//put them into two arraylists, the local alingment sequences of node i and i+1 are put into arraylist 1 and 2 respectively.
+		ArrayList<String> arrList1 = new ArrayList<String> ();
+		ArrayList<String> arrList2 = new ArrayList<String> ();
+		for (int i=0; i<resultArray.length-1; i++) {
+			String[] strs = g.d2.getLocalAlignment(resultArray[i].seq, resultArray[i+1].seq);
+			arrList1.add(strs[0]);
+			arrList2.add(strs[1]);
+		}
+		
+		int size = arrList1.size();
+		//store the starting positions of all the elements in arrList1
+		int[] sposArr1 = new int[size];
+		//store the starting positions of all the elements in arrList2
+		int[] sposArr2 = new int[size];
+		//calculate the starting positions and put them into sposArr1 and sposArr2.
+		sposArr1[0] = 0;
+		sposArr2[0] = 0;
+		for (int i=0; i<size-1; i++) {
+			String s1 = arrList2.get(i);
+			String s2 = arrList1.get(i+1);
+			String s1Tmp = s1.replace("-", "");
+			String s2Tmp = s2.replace("-", "");
+			String subS1 = (g.d2.getLocalAlignment(s1Tmp, s2Tmp))[0];
+			int pos = s1.indexOf("-");
+			int offset = s1Tmp.indexOf(subS1);
+			while (pos != -1) {
+				String tmp = s1.substring(pos+1).replace("-", "");
+				s1Tmp = s1.substring(0, pos+1) + tmp;
+				if (s1Tmp.indexOf(subS1) != -1) {
+					offset++;
+				}
+				pos = s1.indexOf("-", pos+1);
+			}
+			sposArr1[i+1] = sposArr2[i]+offset;
+			sposArr2[i+1] = sposArr1[i+1];
+		}
+		
+				
+		// Create an array which stores all the bases with the same position for all the ESTs.
+		int lenOfArray = resultArray[resultArray.length-1].pos+resultArray[resultArray.length-1].seq.length(); 
+		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			tmpArraylists[i] = new ArrayList<Character>();
+		}
+		// Put all the bases into the array
+		for (int i=0; i<size; i++) {
+			int tmpSPos1 = sposArr1[i];
+			String tmpStr1 = arrList1.get(i);
+			int tmpSPos2 = sposArr2[i];
+			String tmpStr2 = arrList2.get(i);
+			for (int j=0; j<tmpStr1.length(); j++) {
+				int p = tmpSPos1+j;
+				if (p < lenOfArray) {
+					tmpArraylists[p].add(tmpStr1.charAt(j));
+				}
+			}
+			for (int j=0; j<tmpStr2.length(); j++) {
+				int p = tmpSPos2+j;
+				if (p < lenOfArray) {
+					tmpArraylists[p].add(tmpStr2.charAt(j));
+				}
+			}
+		}
+		
+		// Calculate consensus base for each position, and put them into an char array
+		char[] consensus = new char[lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			consensus[i] = getConsensusBase(tmpArraylists[i]);
+		}
+		
+		String retStr = String.valueOf(consensus);
+		retStr = retStr.replace("-", "");
+		return retStr;
+	}
 
 	/*
 	 * overload the same-name method of parent class.
 	 * print the original sequence and multiple consensus into a file which is specified in the property file.
 	 * The printed consensuses start from all the assumed starting position.
 	 */
+	/*
 	public void printConsensus(ArrayList <Integer> leftEnds) {
 		try{ 
 			File outFile = new File(consensusFileName);
@@ -251,9 +349,8 @@ public class NewESTAssembly extends ESTAssembly{
 			}
 			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
 
-			/*
-			 * print the original sequence
-			 */
+			
+			// print the original sequence
 			File oriFile = (new File(oriFileName));
 			if (!oriFile.exists()) {
 				System.out.println("SourceFile does not exist!");
@@ -264,9 +361,8 @@ public class NewESTAssembly extends ESTAssembly{
 			out.write("\n");
 			in.close();	
 
-			/*
-			 * print all the consensuses
-			 */
+			
+			// print all the consensuses
 			String tmpStr = getConsensus();
 			for (int i=0; i<leftEnds.size()-1; i++) {
 				int pos1 = leftEnds.get(i).intValue();
@@ -291,7 +387,45 @@ public class NewESTAssembly extends ESTAssembly{
 		}catch(IOException e){ 
 			System.out.println(e.toString());
 		} 
+	}*/
+	public void printConsensus() {
+		try{ 
+			File outFile = new File(consensusFileName);
+			boolean bExists = outFile.exists();
+			if (bExists) {
+				outFile.delete();
+			}
+			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
+
+			/*
+			 * print the original sequence
+			 */
+			File oriFile = (new File(oriFileName));
+			if (!oriFile.exists()) {
+				System.out.println("SourceFile does not exist!");
+				return;
+			}
+			BufferedReader in = new BufferedReader(new FileReader(oriFile));
+			String oriStr = in.readLine();
+			in.close();	
+
+			/*
+			 * print the consensus
+			 */
+			out.write(oriStr);
+			out.write("\n");
+			String consensus = this.reconstruct();
+			out.write(consensus);
+			out.write("\n");
+			
+			//out.write((g.d2.getLocalAlignment(oriStr, consensus))[2]);
+			out.flush();
+			out.close();
+		}catch(IOException e){ 
+			System.out.println(e.toString());
+		} 
 	}
+
 
 	/*
 	 * Construct a directed Miminum spanning tree.
@@ -361,14 +495,31 @@ public class NewESTAssembly extends ESTAssembly{
 		NewESTAssembly assemble = new NewESTAssembly(props);
 
 		assemble.readEstFile();
+
+		// Get the components of the time
+	    long time1 = new GregorianCalendar().getTimeInMillis();
+		System.out.println("Start to generate MST.");
 		assemble.createAlignArray();
+		System.out.println("End to generate 6-tuples.");
+		System.out.println("The time used to process 6-tuples is " + (new GregorianCalendar().getTimeInMillis()-time1));
+		
+		time1 = new GregorianCalendar().getTimeInMillis();
 		System.out.println("Start to process 6-tuples.");
 		assemble.processAlignArray();
 		System.out.println("End to process 6-tuples.");
+		System.out.println("The time used to process 6-tuples is " + (new GregorianCalendar().getTimeInMillis()-time1));
+		
 		assemble.printSPos();
-		assemble.printConsensus();
-		assemble.printEsts();
+		//assemble.printConsensus();
+		//assemble.printEsts();
 		assemble.calcInversion();
+		
+		time1 = new GregorianCalendar().getTimeInMillis();
+		System.out.println("Start to reconstruct.");
+		assemble.printConsensus();
+		System.out.println("End to reconstruct.");
+		System.out.println("The time used to reconstruct is " + (new GregorianCalendar().getTimeInMillis()-time1));
+
 	}
 
 }

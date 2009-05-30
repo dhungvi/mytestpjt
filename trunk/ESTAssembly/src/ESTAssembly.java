@@ -124,13 +124,11 @@ public class ESTAssembly {
 	
 	public void createAlignArray() {
 		//alignArray = g.alignNodes();	
-		System.out.println("Start to generate MST.");
 		//mstForG = g.genMST();
 		mstForG = g.readMST(mstFile);
 		System.out.println("End to generate MST.");
 		System.out.println("Start to generate 6-tuples.");
 		alignArray = g.get2CloseNodesFromMST(mstForG);
-		System.out.println("End to generate 6-tuples.");
 	}
 
 	/*
@@ -153,7 +151,7 @@ public class ESTAssembly {
 			for (int i=0; i<leftMostNodes.size(); i++) {
 				int cNode = leftMostNodes.get(i).intValue();
 				//int[] lNode = g.get2CloseNodes(cNode);
-				int[] lNode = g.get2CloseNodesFromGrand(mstForG, cNode);
+				int[] lNode = g.get2CloseNodesFromGrand(mstForG, cNode, alignArray[cNode]);
 				alignArray[cNode][0] = lNode[0];
 				alignArray[cNode][1] = lNode[1];
 				alignArray[cNode][2] = lNode[2];
@@ -165,7 +163,7 @@ public class ESTAssembly {
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][2] == -1) {
 				//int[] rNode = g.get2CloseNodes(i);
-				int[] rNode = g.get2CloseNodesFromGrand(mstForG, i);
+				int[] rNode = g.get2CloseNodesFromGrand(mstForG, i, alignArray[i]);
 				alignArray[i][0] = rNode[0];
 				alignArray[i][1] = rNode[1];
 				alignArray[i][2] = rNode[2];
@@ -546,26 +544,34 @@ public class ESTAssembly {
 	/*
 	 * Calculate the consensus base from several characters
 	 */
-	private char getConsensusBase(ArrayList<Character> lst) {
+	public char getConsensusBase(ArrayList<Character> lst) {
 		int numA = 0;
 		int numG = 0;
 		int numC = 0;
 		int numT = 0;
+		int numDash = 0;
 		
 		for (int i=0; i<lst.size(); i++) {
 			switch (lst.get(i).charValue()) {
 				case 'A': 
 					numA++;
+					break;
 				case 'G':
 					numG++;
+					break;
 				case 'C':
 					numC++;
+					break;
 				case 'T':
 					numT++;
+					break;
+				case '-':
+					numDash++;
+					break;
 			}
 		}
 		
-		int max = Math.max(Math.max(Math.max(numA, numG), numC), numT);
+		int max = Math.max(Math.max(Math.max(Math.max(numA, numG), numC), numT), numDash);
 		
 		if (numA == max) {
 			return 'A';
@@ -573,8 +579,10 @@ public class ESTAssembly {
 			return 'G';
 		} else if (numC == max) {
 			return 'C';
-		} else {
+		} else if (numT == max){
 			return 'T';
+		} else {
+			return '-';
 		}
 	}
 	
