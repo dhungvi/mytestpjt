@@ -155,14 +155,14 @@ public class D2 {
 			}*/
 			
 			ValObj vo = words.get(firstWord);
-			//System.out.println("firstWord = " + firstWord);
+			if (vo == null) System.out.println("firstWord = " + firstWord + " includes unexpected character!");
 			
 			int orgFirstValue = (int)Math.pow((vo.v1 - vo.v2), 2);
 			vo.v2 -= 1;
 			int sed = initSed - orgFirstValue + (int)Math.pow((vo.v1 - vo.v2), 2);
 			
 			vo = words.get(lastWord);
-			if (vo == null) System.out.println("lastWord = " + lastWord);
+			if (vo == null) System.out.println("lastWord = " + lastWord + " includes unexpected character!");
 			int orgLastValue = (int)Math.pow((vo.v1 - vo.v2), 2);
 			vo.v2 += 1;
 			sed = sed - orgLastValue + (int)Math.pow((vo.v1 - vo.v2), 2);

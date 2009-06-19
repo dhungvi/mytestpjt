@@ -573,6 +573,9 @@ public class ESTAssembly {
 		
 		int max = Math.max(Math.max(Math.max(Math.max(numA, numG), numC), numT), numDash);
 		
+		if (max == 0) {
+			return ' ';
+		}
 		if (numA == max) {
 			return 'A';
 		} else if (numG == max) {
