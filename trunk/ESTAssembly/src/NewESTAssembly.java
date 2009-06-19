@@ -19,9 +19,12 @@ import com.mhhe.clrs2e.WeightedEdgeIterator;
  * This class is a subclass of ESTAssembly. It assigns NewGraph to member variable g.
  */
 public class NewESTAssembly extends ESTAssembly{
+	ArrayList <Integer> leftMostNodes;
+	
 	public NewESTAssembly(Properties props) {
 		super(props);
 		g = new NewGraph(props);
+		leftMostNodes = new ArrayList<Integer> ();
 	}
 
 	/* Overload the method of parent class
@@ -36,7 +39,7 @@ public class NewESTAssembly extends ESTAssembly{
 	 * the overlap distance instead of overlap length.
 	 */
 	public void processAlignArray() {
-		ArrayList <Integer> leftMostNodes = new ArrayList<Integer> ();
+		//ArrayList <Integer> leftMostNodes = new ArrayList<Integer> ();
 		//get all the nodes which has no left nodes to them
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] == -1) {
@@ -155,7 +158,21 @@ public class NewESTAssembly extends ESTAssembly{
 		System.out.println("dGraph:");
 		printDgraph(dGraph);
 		
-		System.out.println("There are " + leftMostNodes.size() + " left-most nodes.");
+		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after re-running 3 levels.");
+		
+		//The following will be added later.
+		/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
+		 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which 
+		 * makes six-tuple[][0] != -1, then return the six-tuple.
+		 * If we fail to find any node after running out of all the nodes in the MST, we consider it a real left end.
+		 */
+		/*
+		for (int i=0; i<leftMostNodes.size(); i++) {
+			int tEnd = leftMostNodes.get(i).intValue();
+			
+		}
+		*/
+		
 		
 		/*
 		 *  1. print information of all the assumed left-end nodes.
@@ -250,14 +267,66 @@ public class NewESTAssembly extends ESTAssembly{
 	 * reconstruct the sequence
 	 */
 	public String reconstruct() {
-		//sort the array sPos
+		//sort the array sPos (in ascending order)
 		StartPos[] resultArray = new StartPos[sPos.length]; //store the starting positions of ests
 		for (int i=0; i<sPos.length; i++) {
 			resultArray[i] = new StartPos(sPos[i], g.getSeqOfNode(i));
 		}
 		MergeSort merge = new MergeSort();
 		merge.sort(resultArray);
+		//set starting positions to be zero for all the left ends
+		int sizeOfLeftEnds = leftMostNodes.size();
+		StartPos[] leftEnds = new StartPos[sizeOfLeftEnds]; //store the starting positions of ests
+		for (int i=0; i<sizeOfLeftEnds; i++) {
+			int idx = leftMostNodes.get(i).intValue();
+			int pos = Integer.parseInt(g.getNameOfNode(idx));	//actual starting position of the node
+			leftEnds[i] = new StartPos(pos, "");
+		}
+		MergeSort merge1 = new MergeSort();
+		merge1.sort(leftEnds);
 
+		String retStr = "";
+		
+		int index = 0;
+		ArrayList<StartPos> tmpArray = new ArrayList<StartPos> ();
+		/*
+		for (int i=1; i<sizeOfLeftEnds; i++) {
+			tmpArray.clear();
+			while ((index < resultArray.length) && (resultArray[index].pos < leftEnds[i].pos)) {
+				tmpArray.add(resultArray[index++]);
+			}
+			if (i == 5) {
+				System.out.println("Start to process i=5");
+			}
+			retStr = retStr + reconstructSeq(tmpArray, 0) + "\n";
+			if (i == 5) {
+				System.out.println("End to process i=5");
+			}
+		}*/
+			
+		tmpArray.clear();
+		while (index < resultArray.length) {
+			tmpArray.add(resultArray[index++]);
+		}
+		retStr = retStr + reconstructSeq(tmpArray, 0) + "\n";
+
+		return retStr;
+	}
+	
+	/*
+	 * reconstruct a sequence which starts from a left end.
+	 */
+	private String reconstructSeq(ArrayList<StartPos> a, int breakPoint) {
+		int sizeOfa = a.size();
+		if (sizeOfa == 0) {
+			return null;
+		} else if (sizeOfa == 1) {
+			return a.get(0).seq;
+		}
+		StartPos[] resultArray = new StartPos[sizeOfa]; //store the starting positions of ests
+		for (int i=0; i<sizeOfa; i++) {
+			resultArray[i] = a.get(i);
+		}
 		//local align every two adjacent nodes, e.g, node 1 and 2, node 2 and 3..., node i-1 and node i.
 		//put them into two arraylists, the local alingment sequences of node i and i+1 are put into arraylist 1 and 2 respectively.
 		ArrayList<String> arrList1 = new ArrayList<String> ();
@@ -276,35 +345,106 @@ public class NewESTAssembly extends ESTAssembly{
 		//calculate the starting positions and put them into sposArr1 and sposArr2.
 		sposArr1[0] = 0;
 		sposArr2[0] = 0;
-		for (int i=0; i<size-1; i++) {
+		int bPoint = size-1; //record the point when the the program breaks the loop. default is when it goes through all the loops.
+		int flag = 0; //identify if the we need execute reconstruction again for the program breaks the loop.
+		ArrayList<StartPos> b = new ArrayList<StartPos> (); //the input parameter for this function if flag=1.
+		for (int i=breakPoint; i<size-1; i++) {
 			String s1 = arrList2.get(i);
 			String s2 = arrList1.get(i+1);
 			String s1Tmp = s1.replace("-", "");
 			String s2Tmp = s2.replace("-", "");
-			String subS1 = (g.d2.getLocalAlignment(s1Tmp, s2Tmp))[0];
+			
+			// if s1 and s2 do not overlap, record i to bPoint, and break this loop.
+			// get the assembled sequence from all the i<bPoint, add "\n" to the end.
+			// and then restart the reconstruction from i+1.
+			String tmpStr = resultArray[i+1].seq;
+			int tmpPos1 = tmpStr.indexOf(s1Tmp);
+			int tmpPos2 = tmpStr.indexOf(s2Tmp);
+			if (tmpPos1+s1.length() <= tmpPos2+30) {
+				bPoint = i;
+				flag = 1;
+				//put the left data to variable b as the input parameter
+				for (int j=i+1; j<sizeOfa; j++) {
+					b.add(resultArray[j]);
+				}
+				break;
+			}
+			
+			// in general case, s1 should be on the left of s2.
+			// but rarely, s1 may be on the right of s2. If it is the case, we would exchange s1Tmp and s2Tmp, 
+			//     calculate the offset, and then give the offset a negative value.
+			int posDirection = 1;
+			if (tmpPos1 > tmpPos2) {
+				posDirection = -1; //set direction to be -1.
+				String tmp = s1Tmp;
+				s1Tmp = s2Tmp;
+				s2Tmp = tmp;
+			}
+			
+			// find all the "-" in s1 which is in front of subS1 and modify offset.
+			String subS1 = (g.d2.getLocalAlignment(s1Tmp, s2Tmp))[0].replace("-", "");
 			int pos = s1.indexOf("-");
 			int offset = s1Tmp.indexOf(subS1);
-			while (pos != -1) {
-				String tmp = s1.substring(pos+1).replace("-", "");
-				s1Tmp = s1.substring(0, pos+1) + tmp;
-				if (s1Tmp.indexOf(subS1) != -1) {
-					offset++;
+			boolean b1 = (pos != -1) && (pos <= offset); // if there is "-" in front of subS1 in s1.
+			String s3 = arrList1.get(i);
+			boolean b2 = (s3.substring(0, offset+1).indexOf("-") != -1); // if there is "-" in front of subS1 in s2.
+			if (b1 || b2) {
+				/* 
+				 * align the six acquired sequences in sposArr1 and sposArr2 before s1(including s1), and put  
+				 * the correct sequence of s1 into arrList2. Then recalculate the offset of subS1 (we would get a new s1).
+				 */
+				if (i == 1) { //get the previous four sequences
+					String[] alignedStrs = new String[4];
+					alignedStrs[0] = arrList1.get(0);
+					alignedStrs[1] = arrList2.get(0);
+					alignedStrs[2] = arrList1.get(1);
+					alignedStrs[3] = arrList2.get(1);
+					int[] startPos = new int[4];
+					startPos[0] = sposArr1[0];
+					startPos[1] = sposArr2[0];
+					startPos[2] = sposArr1[1];
+					startPos[3] = sposArr2[1];
+					s1 = getCorrectS1(alignedStrs, startPos);
+				} else if (i >= 2) { //get the previous six sequences
+					String[] alignedStrs = new String[6];
+					alignedStrs[0] = arrList1.get(i-2);
+					alignedStrs[1] = arrList2.get(i-2);
+					alignedStrs[2] = arrList1.get(i-1);
+					alignedStrs[3] = arrList2.get(i-1);
+					alignedStrs[4] = arrList1.get(i);
+					alignedStrs[5] = arrList2.get(i);
+					int[] startPos = new int[6];
+					startPos[0] = sposArr1[i-2];
+					startPos[1] = sposArr2[i-2];
+					startPos[2] = sposArr1[i-1];
+					startPos[3] = sposArr2[i-1];
+					startPos[4] = sposArr1[i];
+					startPos[5] = sposArr2[i];
+					s1 = getCorrectS1(alignedStrs, startPos);
 				}
-				pos = s1.indexOf("-", pos+1);
+				arrList2.set(i, s1);
+
+				s1Tmp = s1.replace("-", "");
+				subS1 = (g.d2.getLocalAlignment(s1Tmp, s2Tmp))[0].replace("-", "");
+				offset = s1Tmp.indexOf(subS1);
 			}
+			offset = offset * posDirection;
 			sposArr1[i+1] = sposArr2[i]+offset;
 			sposArr2[i+1] = sposArr1[i+1];
+			
 		}
 		
 				
 		// Create an array which stores all the bases with the same position for all the ESTs.
-		int lenOfArray = resultArray[resultArray.length-1].pos+resultArray[resultArray.length-1].seq.length(); 
+		int lenOfArray = resultArray[bPoint+1].pos
+						- resultArray[0].pos
+						+ resultArray[bPoint+1].seq.length(); 
 		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
 		for (int i=0; i<lenOfArray; i++) {
 			tmpArraylists[i] = new ArrayList<Character>();
 		}
 		// Put all the bases into the array
-		for (int i=0; i<size; i++) {
+		for (int i=breakPoint; i<=bPoint; i++) {
 			int tmpSPos1 = sposArr1[i];
 			String tmpStr1 = arrList1.get(i);
 			int tmpSPos2 = sposArr2[i];
@@ -331,9 +471,55 @@ public class NewESTAssembly extends ESTAssembly{
 		
 		String retStr = String.valueOf(consensus);
 		retStr = retStr.replace("-", "");
+		retStr = retStr.replace(" ", "");
+		
+		if (flag == 1) {//execute the function again
+			retStr = retStr + "\n" + reconstructSeq(b, bPoint+1);
+		} 
 		return retStr;
 	}
+	
+	/*
+	 * Get the correct sequence for the last element in the input string array.
+	 * @param strs an String array which includes all the strings.
+	 * @param pos an int array which records the starting positions of all the elements in strs.
+	 * @return the consensus of the last element in strs.
+	 * 
+	 * Get the consensus according to the two input parameters, then extract the subsequence which corresponds
+	 * to the last element in strs from the consensus.
+	 */
+	private String getCorrectS1(String[] strs, int[] pos) {
+		// Create an array which stores all the bases with the same position.
+		int len = strs.length;
+		int lenOfArray = pos[len-1] - pos[0] + strs[len-1].length();
+		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			tmpArraylists[i] = new ArrayList<Character>();
+		}
 
+		// Put all the bases into the array
+		for (int i=0; i<len; i++) {
+			int tmpSPos = pos[i] - pos[0];
+			String tmpStr = strs[i];
+			for (int j=0; j<tmpStr.length(); j++) {
+				int p = tmpSPos+j;
+				if (p < lenOfArray) {
+					tmpArraylists[p].add(tmpStr.charAt(j));
+				}
+			}
+		}
+		
+		// Calculate consensus base for each position, and put them into an char array
+		char[] consensus = new char[lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			consensus[i] = getConsensusBase(tmpArraylists[i]);
+		}
+		
+		String retStr = String.valueOf(consensus);
+		retStr = retStr.substring(pos[len-1]-pos[0]);
+	
+		return retStr;
+	}
 	/*
 	 * overload the same-name method of parent class.
 	 * print the original sequence and multiple consensus into a file which is specified in the property file.
@@ -406,6 +592,7 @@ public class NewESTAssembly extends ESTAssembly{
 				return;
 			}
 			BufferedReader in = new BufferedReader(new FileReader(oriFile));
+			String comment = in.readLine();
 			String oriStr = in.readLine();
 			in.close();	
 
@@ -452,8 +639,9 @@ public class NewESTAssembly extends ESTAssembly{
 
 	/* 
 	 * The same-name method as the parent class. But it adds one more parameter d.
-	 * Calculate starting positions for each node
+	 * Calculate starting positions for each node. Assign the real starting position to the left end.
 	 */
+	
 	protected void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree, int[][] d) {
 		WeightedEdgeIterator ite = (WeightedEdgeIterator) tree.edgeIterator(parentNode);
 		while (ite.hasNext()) {
@@ -479,6 +667,39 @@ public class NewESTAssembly extends ESTAssembly{
 			getStartPos(index, leftEnd, tree, d);
 		}
 	}
+	
+	
+	/* 
+	 * The same-name method as the parent class. But it adds one more parameter d.
+	 * Calculate starting positions for each node. Assign zero to the left end.
+	 */
+	/*
+	protected void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree, int[][] d) {
+		WeightedEdgeIterator ite = (WeightedEdgeIterator) tree.edgeIterator(parentNode);
+		while (ite.hasNext()) {
+			Vertex v = (Vertex) ite.next();
+			
+			int index = v.getIndex();
+			
+			int overlapLen = 0;
+			for (int i=0; i<d.length; i++) {
+					if ((d[i][0] == parentNode) && (d[i][1] == index)) {
+						overlapLen = d[i][3];
+						break;
+					}
+			}
+			
+			if (parentNode == 0) { // it's left end node actually
+				sPos[index] = sPos[parentNode] - overlapLen;
+			} else if (parentNode == leftEnd) { // it's node 0 actually
+				sPos[index] = sPos[parentNode] + g.getLenOfNode(0) - overlapLen;
+			} else {
+				sPos[index] = sPos[parentNode] + g.getLenOfNode(parentNode) - overlapLen;
+			}
+			getStartPos(index, leftEnd, tree, d);
+		}
+	}
+	*/
 	
 	/**
 	 * @param args
