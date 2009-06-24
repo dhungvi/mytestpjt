@@ -5,7 +5,6 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Properties;
 
@@ -28,31 +27,22 @@ public class NewESTAssembly extends ESTAssembly{
 	}
 
 	/* Overload the method of parent class
-	 * Find the left-most node(alignNodes[][0]==-1);
-	 * Use alignNodes to construct a tree whose values are maximal, that is, 
-	 * 		the tree has maximal overlap length;
-	 * Calculate the starting position of each node.
-	 * 
-	 * This function is different from the same-name method in its parent class in that 
-	 * in order to get starting positions it constructs a MST instead of Maximum Spanning
-	 * tree like what the parent method does. The weight of the Minimum Spanning tree is 
-	 * the overlap distance instead of overlap length.
+	 * Get the assumed left-most node(alignNodes[][0]==-1), check them to find all the real left ends.
 	 */
 	public void processAlignArray() {
-		//ArrayList <Integer> leftMostNodes = new ArrayList<Integer> ();
 		//get all the nodes which has no left nodes to them
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] == -1) {
 				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
 			}
 		}
+
 		//find the two most closest nodes for those leftmostnodes(because some of them may be falsely left-most)
 		int numOfLeftMostNodes = leftMostNodes.size();
 		System.out.println("The number of original left ends is " + numOfLeftMostNodes);
 		if (numOfLeftMostNodes > 1) {
 			for (int i=0; i<leftMostNodes.size(); i++) {
 				int cNode = leftMostNodes.get(i).intValue();
-				//int[] lNode = g.get2CloseNodes(cNode);
 				int[] lNode = g.get2CloseNodesFromGrand(mstForG, cNode, alignArray[cNode]);
 				alignArray[cNode][0] = lNode[0];
 				alignArray[cNode][1] = lNode[1];	//overlap length
@@ -66,58 +56,41 @@ public class NewESTAssembly extends ESTAssembly{
 			}
 		} 
 		
-		//find the two most closest nodes for those rightmostnodes(because we need these information to make a directed maximum spanning tree)
-		/*for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i][3] == -1) {
-				//int[] rNode = g.get2CloseNodes(i);
-				int[] rNode = g.get2CloseNodesFromGrand(mstForG, i, alignArray[i]);
-				if (Math.abs(alignArray[i][2]) > Math.abs(rNode[2])) { //get a smaller distance
-					alignArray[i][0] = rNode[0];
-					alignArray[i][1] = rNode[1];
-					alignArray[i][2] = rNode[2];
-				}
-				alignArray[i][3] = rNode[3];			
-				alignArray[i][4] = rNode[4];
-				alignArray[i][5] = rNode[5];			
-			}
-		} */
-
-		/* construct a directed graph from alignArray, 
+		/* construct a temporary directed graph from alignArray, 
 		 *  	the second dimension has two elements:
 		 *  			index of starting node,
 		 *  			index of ending node, 
 		 *  			weight between them (positive value, weight is abs(their distance)).
 		 *  	if there is no edge, weight=INT_MAX.
 		 */
-		int len = 0;
+		int tLen = 0;
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] != -1) {
-				len++;
+				tLen++;
 			}
 			if (alignArray[i][3] != -1) {
-				len++;
+				tLen++;
 			}
 		}
 		
-		int[][] dGraph = new int[len][4];
-		int indexOfDGraph = 0;
+		int[][] tmpDGraph = new int[tLen][4];
+		int tmpIndex = 0;
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] != -1) {
-				dGraph[indexOfDGraph][0] = alignArray[i][0];
-				dGraph[indexOfDGraph][1] = i;
-				dGraph[indexOfDGraph][2] = Math.abs(alignArray[i][2]);	//distance
-				dGraph[indexOfDGraph][3] = Math.abs(alignArray[i][1]);	//overlap length
-				indexOfDGraph++;
+				tmpDGraph[tmpIndex][0] = alignArray[i][0];
+				tmpDGraph[tmpIndex][1] = i;
+				tmpDGraph[tmpIndex][2] = Math.abs(alignArray[i][2]);	//distance
+				tmpDGraph[tmpIndex][3] = Math.abs(alignArray[i][1]);	//overlap length
+				tmpIndex++;
 			}
 			
 			if (alignArray[i][3] != -1) {
-				dGraph[indexOfDGraph][0] = i;
-				dGraph[indexOfDGraph][1] = alignArray[i][3];
-				dGraph[indexOfDGraph][2] = alignArray[i][5];	//distance
-				dGraph[indexOfDGraph][3] = alignArray[i][4];	//overlap length
-				indexOfDGraph++;
+				tmpDGraph[tmpIndex][0] = i;
+				tmpDGraph[tmpIndex][1] = alignArray[i][3];
+				tmpDGraph[tmpIndex][2] = alignArray[i][5];	//distance
+				tmpDGraph[tmpIndex][3] = alignArray[i][4];	//overlap length
+				tmpIndex++;
 			}
-
 		}
 		
 		/*
@@ -140,8 +113,8 @@ public class NewESTAssembly extends ESTAssembly{
 			int f = 0;
 			//if the left end appears in second element of dGraph, that means some 
 			//node is on its left, so it is not a real left end.
-			for (int j=0; j<dGraph.length; j++) {
-				if (dGraph[j][1] == tEnd) {	// false left end
+			for (int j=0; j<tmpDGraph.length; j++) {
+				if (tmpDGraph[j][1] == tEnd) {	// false left end
 					f = 1;
 					break;
 				}
@@ -152,91 +125,43 @@ public class NewESTAssembly extends ESTAssembly{
 		}
 		
 		//print mst
-		System.out.println("Original minimum Spanning Tree:");
-		System.out.println(mstForG);
-		//print dGraph
-		System.out.println("dGraph:");
-		printDgraph(dGraph);
+		//System.out.println("Original minimum Spanning Tree:");
+		//System.out.println(mstForG);
+		//print tmpDGraph
+		//System.out.println("dGraph:");
+		//printDgraph(tmpDGraph);
 		
 		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after re-running 3 levels.");
 		
-		//The following will be added later.
 		/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
 		 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which 
-		 * makes six-tuple[][0] != -1, then return the six-tuple.
+		 * makes six-tuple[0] != -1, then return the six-tuple.
 		 * If we fail to find any node after running out of all the nodes in the MST, we consider it a real left end.
 		 */
-		/*
 		for (int i=0; i<leftMostNodes.size(); i++) {
-			int tEnd = leftMostNodes.get(i).intValue();
-			
+			int tEnd = leftMostNodes.get(i).intValue(); //index of the node
+			int[] tmpTuple = g.checkLeftEndFromMST(mstForG, tEnd, alignArray[tEnd]);
+			if (tmpTuple != null) {
+				alignArray[tEnd][0] = tmpTuple[0];
+				alignArray[tEnd][1] = tmpTuple[1];
+				alignArray[tEnd][2] = tmpTuple[2];
+				alignArray[tEnd][3] = tmpTuple[3];
+				alignArray[tEnd][4] = tmpTuple[4];
+				alignArray[tEnd][5] = tmpTuple[5];
+			}
 		}
-		*/
-		
 		
 		/*
-		 *  1. print information of all the assumed left-end nodes.
-		 *  	starting position of the node;
-		 * 		whether or not they are real left ends;
-		 * 		If they are false left ends, print the overlap length they have with other nodes.
-		 *  2. For each left-end node, starting from it to calculate positions for each node.
-		 *  	Because the Prim algorithm starts from index 0 to generate MST, we have to
-		 *  		put left-end node to index 0 in order to get the MST we want. If Prim does 
-		 *  		not start from the left-end node, the directed tree will be unconnected.
+		 * Re-find those left ends.
 		 */
-		sPos = new int[alignArray.length];	//store starting positions of all the nodes
-		//int[][] tmpGraph = dGraph;	//keep the original values of dGraph to pass to constructMinTree as parameter.
-									//because dGraph will be changed in the following for loop.
-		WeightedAdjacencyListGraph primMST = null;
-		for (int i=0; i<leftMostNodes.size(); i++) {
-			int leftEnd = leftMostNodes.get(i).intValue();
-			printLeftEndInfo(leftEnd);
-
-			// Calculate starting positions using maximum spanning tree starting from this left-end node.
-			for (int t=0; t<dGraph.length; t++) {
-				//exchange index of node 0 and the left-end node so as Prim starts from the left end.
-				if (dGraph[t][0] == 0) {
-					dGraph[t][0] = leftEnd;
-				} else if (dGraph[t][0] == leftEnd) {
-					dGraph[t][0] = 0;
-				}
-				if (dGraph[t][1] == 0) {
-					dGraph[t][1] = leftEnd;
-				} else if (dGraph[t][1] == leftEnd) {
-					dGraph[t][1] = 0;
-				}
+		//Get all the nodes which has the value of -1 in alignArray[x][0]
+		leftMostNodes.clear();
+		for (int i=0; i<alignArray.length; i++) {
+			if (alignArray[i][0] == -1) {
+				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
 			}
-			primMST = constructMinTree(alignArray.length, dGraph);
-			//primMST = constructMaxTree(alignArray.length, dGraph);
-			
-			//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
-			sPos[leftEnd] = sPos[0];
-			sPos[0] = Integer.parseInt(g.getNameOfNode(leftEnd)); //starting position of the node
-			//get starting positions for the nodes in primMST
-			getStartPos(0, leftEnd, primMST, dGraph);
-			//exchange sPos[0] and sPos[leftEnd] to recover index 0 in sPos
-			int tmp = sPos[0];
-			sPos[0] = sPos[leftEnd];
-			sPos[leftEnd] = tmp;
-
-			//re-exchange index of node 0 and the left-end node to recover dGraph to its original values. 
-			for (int t=0; t<dGraph.length; t++) {
-				if (dGraph[t][0] == 0) {
-					dGraph[t][0] = leftEnd;
-				} else if (dGraph[t][0] == leftEnd) {
-					dGraph[t][0] = 0;
-				}
-				if (dGraph[t][1] == 0) {
-					dGraph[t][1] = leftEnd;
-				} else if (dGraph[t][1] == leftEnd) {
-					dGraph[t][1] = 0;
-				}
-			}
-			//print mst
-			//System.out.println("Minimum Spanning Tree for starting positions:");
-			//System.out.println(primMST);
 		}
-		//this.printConsensus(leftMostNodes);
+		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after checking left ends.");
 	}
 
 	protected WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
@@ -265,52 +190,184 @@ public class NewESTAssembly extends ESTAssembly{
 	
 	/*
 	 * reconstruct the sequence
+	 * 
+	 * 1. Generate dGraph. 
+	 * 2. For each left-end node, starting from it to calculate positions for each node. 
+	 * In order to get starting positions, it constructs a MST. The weight of the Minimum Spanning tree is 
+	 * the overlap distance instead of overlap length. 
+	 * Then reconstruct the sequence from the set of ESTs.
+	 * 
+	 * @return The assembled sequences.
 	 */
 	public String reconstruct() {
-		//sort the array sPos (in ascending order)
-		StartPos[] resultArray = new StartPos[sPos.length]; //store the starting positions of ests
-		for (int i=0; i<sPos.length; i++) {
-			resultArray[i] = new StartPos(sPos[i], g.getSeqOfNode(i));
-		}
-		MergeSort merge = new MergeSort();
-		merge.sort(resultArray);
-		//set starting positions to be zero for all the left ends
-		int sizeOfLeftEnds = leftMostNodes.size();
-		StartPos[] leftEnds = new StartPos[sizeOfLeftEnds]; //store the starting positions of ests
-		for (int i=0; i<sizeOfLeftEnds; i++) {
-			int idx = leftMostNodes.get(i).intValue();
-			int pos = Integer.parseInt(g.getNameOfNode(idx));	//actual starting position of the node
-			leftEnds[i] = new StartPos(pos, "");
-		}
-		MergeSort merge1 = new MergeSort();
-		merge1.sort(leftEnds);
-
-		String retStr = "";
-		
-		int index = 0;
-		ArrayList<StartPos> tmpArray = new ArrayList<StartPos> ();
 		/*
-		for (int i=1; i<sizeOfLeftEnds; i++) {
-			tmpArray.clear();
-			while ((index < resultArray.length) && (resultArray[index].pos < leftEnds[i].pos)) {
-				tmpArray.add(resultArray[index++]);
+		 * Calculate the length of dGraph.
+		 */
+		//Get all the nodes which has the value of -1 in alignArray[x][0]
+		int len = 0;
+		for (int i=0; i<alignArray.length; i++) {
+			if (alignArray[i][0] != -1) {
+				len++;
 			}
-			if (i == 5) {
-				System.out.println("Start to process i=5");
+			if (alignArray[i][3] != -1) {
+				len++;
 			}
-			retStr = retStr + reconstructSeq(tmpArray, 0) + "\n";
-			if (i == 5) {
-				System.out.println("End to process i=5");
-			}
-		}*/
-			
-		tmpArray.clear();
-		while (index < resultArray.length) {
-			tmpArray.add(resultArray[index++]);
 		}
-		retStr = retStr + reconstructSeq(tmpArray, 0) + "\n";
+		/*
+		 * generate dGraph.
+		 */
+		int[][] dGraph = new int[len][4];
+		int indexOfDGraph = 0;
+		for (int i=0; i<alignArray.length; i++) {
+			if (alignArray[i][0] != -1) {
+				dGraph[indexOfDGraph][0] = alignArray[i][0];
+				dGraph[indexOfDGraph][1] = i;
+				dGraph[indexOfDGraph][2] = Math.abs(alignArray[i][2]);	//distance
+				dGraph[indexOfDGraph][3] = Math.abs(alignArray[i][1]);	//overlap length
+				indexOfDGraph++;
+			}
+			
+			if (alignArray[i][3] != -1) {
+				dGraph[indexOfDGraph][0] = i;
+				dGraph[indexOfDGraph][1] = alignArray[i][3];
+				dGraph[indexOfDGraph][2] = alignArray[i][5];	//distance
+				dGraph[indexOfDGraph][3] = alignArray[i][4];	//overlap length
+				indexOfDGraph++;
+			}
+		}
 
+		//print dGraph
+		//System.out.println("dGraph:");
+		//printDgraph(dGraph);
+		
+		/*
+		 *  1. print information of all the left-end nodes.
+		 *  	starting position of the node;
+		 * 		whether or not they are real left ends;
+		 * 		If they are false left ends, print the overlap length they have with other nodes.
+		 *  2. For each left-end node, starting from it to calculate positions for each node.
+		 *  	Because the Prim algorithm starts from index 0 to generate MST, we have to
+		 *  		put left-end node to index 0 in order to get the MST we want. If Prim does 
+		 *  		not start from the left-end node, the directed tree will be unconnected.
+		 *     Then reconstruct the sequence from the set of ESTs.
+		 *     Return all the generated sequences which are separated by feedline.
+		 */
+		WeightedAdjacencyListGraph primMST = null;
+		String retStr = "";
+		ArrayList<String> allConsensus= new ArrayList<String> ();	//store all the generated sequences
+		for (int i=0; i<leftMostNodes.size(); i++) {
+			sPos = new int[alignArray.length];	//store starting positions of all the nodes
+
+			int leftEnd = leftMostNodes.get(i).intValue();
+			printLeftEndInfo(leftEnd);
+			
+			// Calculate starting positions using maximum spanning tree starting from this left-end node.
+			for (int t=0; t<dGraph.length; t++) {
+				//exchange index of node 0 and the left-end node so as Prim starts from the left end.
+				if (dGraph[t][0] == 0) {
+					dGraph[t][0] = leftEnd;
+				} else if (dGraph[t][0] == leftEnd) {
+					dGraph[t][0] = 0;
+				}
+				if (dGraph[t][1] == 0) {
+					dGraph[t][1] = leftEnd;
+				} else if (dGraph[t][1] == leftEnd) {
+					dGraph[t][1] = 0;
+				}
+			}
+			primMST = constructMinTree(alignArray.length, dGraph);
+			
+			//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
+			sPos[leftEnd] = sPos[0];
+			//sPos[0] = Integer.parseInt(g.getNameOfNode(leftEnd)); //starting position of the node
+			sPos[0] = 0; //starting position of the left end is assigned to be 0.
+			//get starting positions for the nodes in primMST
+			getStartPos(0, leftEnd, primMST, dGraph);
+			//exchange sPos[0] and sPos[leftEnd] to recover index 0 in sPos
+			int tmp = sPos[0];
+			sPos[0] = sPos[leftEnd];
+			sPos[leftEnd] = tmp;
+
+			
+			//reconstruct this sequence 
+			//sort the array sPos (in ascending order)
+			ArrayList<StartPos> tmpArray = new ArrayList<StartPos> ();
+			for (int j=0; j<sPos.length; j++) {
+				if ((j == leftEnd) || (sPos[j] != 0)) {
+					tmpArray.add(new StartPos(sPos[j], g.getSeqOfNode(j)));
+				}
+			}
+			
+			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.");
+			String tStr = reconstructSeq(tmpArray, 0);
+			allConsensus.add(tStr);
+			retStr = retStr + tStr + "\n";
+
+			
+			//re-exchange index of node 0 and the left-end node to recover dGraph to its original values. 
+			for (int t=0; t<dGraph.length; t++) {
+				if (dGraph[t][0] == 0) {
+					dGraph[t][0] = leftEnd;
+				} else if (dGraph[t][0] == leftEnd) {
+					dGraph[t][0] = 0;
+				}
+				if (dGraph[t][1] == 0) {
+					dGraph[t][1] = leftEnd;
+				} else if (dGraph[t][1] == leftEnd) {
+					dGraph[t][1] = 0;
+				}
+			}
+		}
+		
+		//if there are more than one consensus, process them.
+		int tmpSize = allConsensus.size();
+		if (tmpSize > 1) { 
+			retStr = retStr + "The consensus from above " + tmpSize + " sequences:\n\n";
+			String s = processMoreConsensus(allConsensus);
+			retStr = retStr + s;
+		}
 		return retStr;
+	}
+	
+	/*
+	 * This method may be changed later.
+	 * This method is used when there are more than one consensus in the assembly.
+	 * According to the results of tests (note that it has not been proved), these consensus originate from 
+	 * more than one left ends which include each other. Although the consensus are different at their beginning, 
+	 * they end with the same characters.
+	 * For example, they will look like:
+	 * AGGCTCTCCCCAAGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
+	 *                       TTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
+	 *               TCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
+	 *           CAAGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
+	 * 
+	 * So in this method, we reverse all the consensus, and get one consensus from them. 
+	 */
+	private String processMoreConsensus(ArrayList<String> s) {
+		int size = s.size();
+		String[] strs = new String[size];
+		int maxLen = 0; //the maximal length of all the strings.
+		for (int i=0; i<size; i++) {
+			strs[i] = s.get(i).toString();
+			if (strs[i].length() > maxLen) {
+				maxLen = strs[i].length();
+			}
+		}
+		
+		// Calculate consensus base for each position, and put them into an char array
+		char[] consensus = new char[maxLen];
+		for (int i=0; i<maxLen; i++) {
+			ArrayList<Character> tmpArraylist = new ArrayList<Character>();
+			for (int j=0; j<size; j++) {
+				int index = strs[j].length() - (i+1);
+				if (index >= 0) {
+					tmpArraylist.add(strs[j].charAt(index));
+				}
+			}
+			consensus[maxLen-i-1] = getConsensusBase(tmpArraylist);
+		}
+		
+		return String.valueOf(consensus);
 	}
 	
 	/*
@@ -327,8 +384,12 @@ public class NewESTAssembly extends ESTAssembly{
 		for (int i=0; i<sizeOfa; i++) {
 			resultArray[i] = a.get(i);
 		}
+		MergeSort merge = new MergeSort();
+		merge.sort(resultArray);
+
+
 		//local align every two adjacent nodes, e.g, node 1 and 2, node 2 and 3..., node i-1 and node i.
-		//put them into two arraylists, the local alingment sequences of node i and i+1 are put into arraylist 1 and 2 respectively.
+		//put them into two arraylists, the local alignment sequences of node i and i+1 are put into arraylist 1 and 2 respectively.
 		ArrayList<String> arrList1 = new ArrayList<String> ();
 		ArrayList<String> arrList2 = new ArrayList<String> ();
 		for (int i=0; i<resultArray.length-1; i++) {
@@ -431,7 +492,6 @@ public class NewESTAssembly extends ESTAssembly{
 			offset = offset * posDirection;
 			sposArr1[i+1] = sposArr2[i]+offset;
 			sposArr2[i+1] = sposArr1[i+1];
-			
 		}
 		
 				
@@ -517,63 +577,15 @@ public class NewESTAssembly extends ESTAssembly{
 		
 		String retStr = String.valueOf(consensus);
 		retStr = retStr.substring(pos[len-1]-pos[0]);
-	
+
 		return retStr;
 	}
+	
 	/*
 	 * overload the same-name method of parent class.
 	 * print the original sequence and multiple consensus into a file which is specified in the property file.
 	 * The printed consensuses start from all the assumed starting position.
 	 */
-	/*
-	public void printConsensus(ArrayList <Integer> leftEnds) {
-		try{ 
-			File outFile = new File(consensusFileName);
-			boolean bExists = outFile.exists();
-			if (bExists) {
-				outFile.delete();
-			}
-			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
-
-			
-			// print the original sequence
-			File oriFile = (new File(oriFileName));
-			if (!oriFile.exists()) {
-				System.out.println("SourceFile does not exist!");
-				return;
-			}
-			BufferedReader in = new BufferedReader(new FileReader(oriFile));
-			out.write(in.readLine());
-			out.write("\n");
-			in.close();	
-
-			
-			// print all the consensuses
-			String tmpStr = getConsensus();
-			for (int i=0; i<leftEnds.size()-1; i++) {
-				int pos1 = leftEnds.get(i).intValue();
-				int pos2 = leftEnds.get(i+1).intValue();
-				String s = tmpStr.substring(pos1, pos2+1);
-				for (int j=0; j<pos1; j++) {
-					out.write(" ");
-				}
-				out.write(s);
-				out.write("\n");
-			}
-			int pos2 = leftEnds.get(leftEnds.size()-1);
-			String s = tmpStr.substring(pos2);
-			for (int j=0; j<pos2; j++) {
-				out.write(" ");
-			}
-			out.write(s);
-			out.write("\n");
-			
-			out.flush();
-			out.close();
-		}catch(IOException e){ 
-			System.out.println(e.toString());
-		} 
-	}*/
 	public void printConsensus() {
 		try{ 
 			File outFile = new File(consensusFileName);
@@ -605,7 +617,6 @@ public class NewESTAssembly extends ESTAssembly{
 			out.write(consensus);
 			out.write("\n");
 			
-			//out.write((g.d2.getLocalAlignment(oriStr, consensus))[2]);
 			out.flush();
 			out.close();
 		}catch(IOException e){ 
@@ -730,10 +741,10 @@ public class NewESTAssembly extends ESTAssembly{
 		System.out.println("End to process 6-tuples.");
 		System.out.println("The time used to process 6-tuples is " + (new GregorianCalendar().getTimeInMillis()-time1));
 		
-		assemble.printSPos();
+		//assemble.printSPos();
 		//assemble.printConsensus();
 		//assemble.printEsts();
-		assemble.calcInversion();
+		//assemble.calcInversion();
 		
 		time1 = new GregorianCalendar().getTimeInMillis();
 		System.out.println("Start to reconstruct.");
