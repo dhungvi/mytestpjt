@@ -17,11 +17,11 @@ public class Graph {
 								//function 'getNClosestNodes' uses 'num' as parameter.
 
 	ArrayList<Node> graphNodes;
-	D2 d2;
+	NewD2 d2;
 	
 	public Graph(Properties p) {
 		graphNodes = new ArrayList<Node> ();
-		d2 = new D2(p);
+		//d2 = new D2(p);
 	}
 	
 	public void addNode(Node s) {
@@ -356,6 +356,7 @@ public class Graph {
 		
 		return closeNodes;
 	}
+	
 	
 	/**
 	 * Get two closest node on the left and closet node on the right for the input node.

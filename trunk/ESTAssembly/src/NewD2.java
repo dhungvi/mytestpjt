@@ -136,6 +136,76 @@ public class NewD2 extends D2{
 		return returnValues;
 	}
 
+	/*
+	 * judge if s1 is included in s2
+	 * @return true or false
+	 */
+	protected boolean checkInclusion(String s1, String s2) {
+		String leftWindow = s1.substring(0, windowSize);
+		String rightWindow = s1.substring(s1.length()-windowSize);
+		Object[] leftPos = getWindowPos(leftWindow, s2);
+		Object[] rightPos = getWindowPos(rightWindow, s2);
+		int disLeft = INT_MAX;
+		int disRight = INT_MAX;
+ 		int lenOverlap = 0;
+ 		int lLenOverlap = 0;
+ 		int rLenOverlap = 0;
+  		
+		// if all leftPos[i] are -1, disLeft will be kept to be INT_MAX.
+ 		for (int i=0; i<leftPos.length; i++) {
+ 			int lPos = ((Integer)(leftPos[i])).intValue();
+ 			int tLenOverlap = s2.length() - lPos; 
+	 		int tmpDis = INT_MAX;
+			if (tLenOverlap > s1.length()) {	//if s1 is included in s2
+				tmpDis = this.getDistance(s1.substring(0, s1.length()), s2.substring(lPos, lPos+s1.length()));
+				tLenOverlap = s1.length();
+			} else {
+				tmpDis = this.getDistance(s1.substring(0, tLenOverlap), s2.substring(lPos));
+			}
+			if (tmpDis < disLeft){ // && (tLenOverlap > lLenOverlap), do we need to use two conditions or just one?
+				disLeft = tmpDis;
+				lLenOverlap = tLenOverlap;
+			}
+ 		}
+		
+		// if all rightPos[i] are -1, disRight will be kept to be INT_MAX.
+ 		for (int i=0; i<rightPos.length; i++) {
+ 			int rPos = ((Integer)(rightPos[i])).intValue();
+			int tLenOverlap = rPos + windowSize; 
+			int lenInS1 = s1.length()-tLenOverlap;
+
+	 		int tmpDis = INT_MAX;
+			if (lenInS1 < 0) {	//if s1 is included in s2
+				tmpDis = this.getDistance(s1.substring(0), s2.substring(tLenOverlap-s1.length(), tLenOverlap));
+				tLenOverlap = s1.length();
+			} else {
+				tmpDis = this.getDistance(s1.substring(lenInS1), s2.substring(0, tLenOverlap));
+			}
+			if (tmpDis < disRight) {// && (tLenOverlap > rLenOverlap). do we need to use two conditions or just one?
+				disRight = tmpDis;
+				rLenOverlap = tLenOverlap;
+			}
+ 		}
+
+		
+		// compare disLeft and disRight, select the one with smaller value.
+		if (disLeft < disRight) {
+			lenOverlap = -1 * lLenOverlap;
+		} else {
+			lenOverlap = rLenOverlap;
+		} 
+			
+		/*if s1 is included in s2, return true, else return false
+		 */
+		if ((Math.abs(lenOverlap) == s1.length()) && 
+				(s1.length() <= s2.length()) && 
+				((disRight <= InclusionThreshold) || (Math.abs(disLeft) <= InclusionThreshold))) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	/**
 	 * Overload the method in parent class.
 	 * This function is different from the same-name method in its parent class in that It tries to find the position 
@@ -317,19 +387,21 @@ public class NewD2 extends D2{
 		}
 		
 		NewD2 d2 = new NewD2(props);
-		String s1 = "TTGTGTTTAATAGGGGAGAGCTGCCACTGTCTCAGGTTCGAGGAGCTCATTCAGTGCTGGAAGAGTTGGTGGAGGCGACTCCCGGGTGCAGCTTGGCTCCTCCAACCCAGGGCTGCACCAGTAACCCCTGCACCAATGGAGGCACATGATCAGCACTGCCTAATGGAGGATATTTCTGTAAGTGCACCGCTGCATTCATGGGCACTCAATGTGAAGTCACTATCAGCCCTTGTGCCTCTAATCCCTGTCTCTATGGCGGCACATGCATCCCACGAGGAGGAGACTTTTACTGCCAGTGCAGAGGACAGTACTCTGGGCAACGGTGTCAGCTGGGGCCGTACCGCACTGATAACCCGTGTAAGAACAGTGGCAAGTGCATTGATAGCCTAGATGGCCCTGTATGTGACTGTGAACCGGGTTTCCAAGCAGAAAGGTGTCTCAGTGATGTAGACGAGTGTTTGAAGAACCCTTGTCGC";
-		String s2 = "GGGAGAGAGCTGCCACTGTCTCAGGTTCGAGGAGCTCATTCAGTGCTGGAAGAGTTGGTGGAGGCGGCTCCCGGGTGCAGCTTGGCTCCGCCAATCCAGGGCTGCACCAGTAACCCCTGCACCAAGGGAGGCACATGTTCAGCACTGCCTAATGGAGGATATTTCTGTAAGTGCACCGCTGCATTCATGGGCACTCACTGTGATGTCACTATCAGCCCTTGTGCCTCTAATCCCTGTCTCTATGGAGGCACATGCATCCCACGAGGAGGAGACTTTTAATGCCAGTGCAGAGGACAGTACTCTGGGCAACGGTGTCAGCTGGGGCC";
+		String s2 = "AGCTTTTTGGGAGAGAGCTGCCACTGTCTCAGGTTCGAGGAGCTCATTCAGTGCTGGAAGAGTTGGTGGAGGCGGCTCCCGGGTGCAGCTTGGCTCCGCCAATCCAGGGCTGCACCAGTAACCCCTGCACCAAGGGAGGCACATGTTCAGCACTGCCTAATGGAGGATATTTCTGTAAGTGCACCGCTGCATTCATGGGCACTCACTGTGATGTCACTATCAGCCCTTGTGCCTCTAATCCCTGTCTCTATGGAGGCACATGCATCCCACGAGGAGGAGACTTTTAATGCCAGTGCAGAGGACAGTACTCTGGGCAACGGTGTCAGCTGGGGCCAGCTTTT";
+		String s1 = "GGGAGAGAGCTGCCACTGTCTCAGGTTCGAGGAGCTCATTCAGTGCTGGAAGAGTTGGTGGAGGCGGCTCCCGGGTGCAGCTTGGCTCCGCCAATCCAGGGCTGCACCAGTAACCCCTGCACCAAGGGAGGCACATGTTCAGCACTGCCTAATGGAGGATATTTCTGTAAGTGCACCGCTGCATTCATGGGCACTCACTGTGATGTCACTATCAGCCCTTGTGCCTCTAATCCCTGTCTCTATGGAGGCACATGCATCCCACGAGGAGGAGACTTTTAATGCCAGTGCAGAGGACAGTACTCTGGGCAACGGTGTCAGCTGGGGCC";
 		//System.out.println(d2.getSimlarityScore(s1,s2));
-		System.out.println(d2.getLocalSimlarityScore(s1,s2));
-		int offset = s1.indexOf(s2);
-		System.out.println("offset=" + offset);
+		//System.out.println(d2.getLocalSimlarityScore(s1,s2));
+		//int offset = s1.indexOf(s2);
+		//System.out.println("offset=" + offset);
 		//System.out.println(d2.getDistance(s1,s2));
-		s1 = s1.toUpperCase();
-		s2 = s2.toUpperCase();
-		int tmp[] = new int[2];
+		//s1 = s1.toUpperCase();
+		//s2 = s2.toUpperCase();
+		//int tmp[] = new int[2];
 		//tmp = d2.getOVLDistance(s1, s2);
-		System.out.println(tmp[1] + " " + tmp[0]);
-
+		//System.out.println(tmp[1] + " " + tmp[0]);
+		int[] result = d2.getOVLDistance(s1, s2);
+		System.out.println("length = "+result[0]);
+		System.out.println("distance = "+result[1]);
 	}
 
 }

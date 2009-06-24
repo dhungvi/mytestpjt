@@ -20,7 +20,7 @@ public class ESTAssembly {
 	String resultFileName;
 	String consensusFileName;
 	ArrayList<String> ests;	//store all the ests. It is generated in 'readEstFile' function.
-	Graph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
+	NewGraph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
 	WeightedAdjacencyListGraph mstForG;	//minimum spanning tree generated from 'g'
 										//It is generated in 'createAlignArray' function.
 	/*
@@ -46,7 +46,7 @@ public class ESTAssembly {
 		ests = new ArrayList<String> ();
 		alignArray = null;
 		sPos = null;
-		g= new Graph(props);
+		//g= new Graph(props);
 	}
 	
 	/*
