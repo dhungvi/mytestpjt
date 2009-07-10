@@ -346,7 +346,7 @@ public class ESTAssembly {
 		}
 		
 		if (flag == 0) {
-			System.out.println("Node " + leftEnd + " is a real left-most node.\n");
+			System.out.println("Node " + leftEnd + " is a real left-most node.");
 		} else {
 			System.out.println();
 		}
