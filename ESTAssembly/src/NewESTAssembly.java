@@ -161,7 +161,7 @@ public class NewESTAssembly extends ESTAssembly{
 				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
 			}
 		}
-		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after checking left ends.");
+		System.out.println("\nThere are " + leftMostNodes.size() + " left-most nodes after checking left ends.");
 	}
 
 	protected WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
@@ -255,6 +255,7 @@ public class NewESTAssembly extends ESTAssembly{
 		WeightedAdjacencyListGraph primMST = null;
 		String retStr = "";
 		ArrayList<String> allConsensus= new ArrayList<String> ();	//store all the generated sequences
+		ArrayList<String> lastEsts = new ArrayList<String> ();
 		for (int i=0; i<leftMostNodes.size(); i++) {
 			sPos = new int[alignArray.length];	//store starting positions of all the nodes
 
@@ -297,8 +298,8 @@ public class NewESTAssembly extends ESTAssembly{
 					tmpArray.add(new StartPos(sPos[j], g.getSeqOfNode(j)));
 				}
 			}
-			
-			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.");
+			lastEsts.add(tmpArray.get(tmpArray.size()-1).seq);
+			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.\n");
 			String tStr = reconstructSeq(tmpArray, 0);
 			allConsensus.add(tStr);
 			retStr = retStr + tStr + "\n";
@@ -323,7 +324,7 @@ public class NewESTAssembly extends ESTAssembly{
 		int tmpSize = allConsensus.size();
 		if (tmpSize > 1) { 
 			retStr = retStr + "The consensus from above " + tmpSize + " sequences:\n\n";
-			String s = processMoreConsensus(allConsensus);
+			String s = processMoreConsensus(allConsensus, lastEsts);
 			retStr = retStr + s;
 		}
 		return retStr;
@@ -342,32 +343,64 @@ public class NewESTAssembly extends ESTAssembly{
 	 *           CAAGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
 	 * 
 	 * So in this method, we reverse all the consensus, and get one consensus from them. 
+	 * 
+	 * change to this method:
+	 * If two consensus ends with the same Est, we process them. If not, we do not process them.
 	 */
-	private String processMoreConsensus(ArrayList<String> s) {
-		int size = s.size();
-		String[] strs = new String[size];
+	private String processMoreConsensus(ArrayList<String> s, ArrayList<String> lastEsts) {
 		int maxLen = 0; //the maximal length of all the strings.
-		for (int i=0; i<size; i++) {
-			strs[i] = s.get(i).toString();
-			if (strs[i].length() > maxLen) {
-				maxLen = strs[i].length();
+		int indexOfMax = -1;
+		for (int i=0; i<s.size(); i++) {
+			int tLen = s.get(i).toString().length();
+			if (tLen > maxLen) {
+				maxLen = tLen;
+				indexOfMax = i;
 			}
 		}
-		
-		// Calculate consensus base for each position, and put them into an char array
-		char[] consensus = new char[maxLen];
-		for (int i=0; i<maxLen; i++) {
-			ArrayList<Character> tmpArraylist = new ArrayList<Character>();
-			for (int j=0; j<size; j++) {
-				int index = strs[j].length() - (i+1);
-				if (index >= 0) {
-					tmpArraylist.add(strs[j].charAt(index));
+		String maxLastStr = lastEsts.get(indexOfMax);
+		ArrayList<String> tmpStr1 = new ArrayList<String>(); //will be processed
+		ArrayList<String> tmpStr2 = new ArrayList<String>(); //won't be processed
+		tmpStr1.add(s.get(indexOfMax));
+		for (int i=0; i<s.size(); i++) {
+			if (i != indexOfMax) {
+				if (lastEsts.get(i).compareToIgnoreCase(maxLastStr) == 0) {
+					tmpStr1.add(s.get(i));
+				} else {
+					tmpStr2.add(s.get(i));
 				}
 			}
-			consensus[maxLen-i-1] = getConsensusBase(tmpArraylist);
+		}
+
+		String retStr = "";
+		int size = tmpStr1.size();
+		if (size > 2) {
+			String[] strs = new String[size];
+			for (int i=0; i<size; i++) {
+				strs[i] = tmpStr1.get(i);
+			}
+
+			// Calculate consensus base for each position, and put them into an char array
+			char[] consensus = new char[maxLen];
+			for (int i=0; i<maxLen; i++) {
+				ArrayList<Character> tmpArraylist = new ArrayList<Character>();
+				for (int j=0; j<size; j++) {
+					int index = strs[j].length() - (i+1);
+					if (index >= 0) {
+						tmpArraylist.add(strs[j].charAt(index));
+					}
+				}
+				consensus[maxLen-i-1] = getConsensusBase(tmpArraylist);
+			}
+			retStr = retStr + String.valueOf(consensus);
+		} else if ((size == 1)|| (size == 2)) {
+			retStr = retStr + tmpStr1.get(0);
 		}
 		
-		return String.valueOf(consensus);
+		for (int i=0; i<tmpStr2.size(); i++) {
+			retStr = retStr + "\n" + tmpStr2.get(i);
+		}
+		
+		return retStr;
 	}
 	
 	/*
@@ -430,71 +463,160 @@ public class NewESTAssembly extends ESTAssembly{
 				}
 				break;
 			}
-			
 			// in general case, s1 should be on the left of s2.
-			// but rarely, s1 may be on the right of s2. If it is the case, we would exchange s1Tmp and s2Tmp, 
+			// but rarely, s1 may be on the right of s2. If it is the case, we would exchange s1 and s2, 
 			//     calculate the offset, and then give the offset a negative value.
 			int posDirection = 1;
+			tmpPos1 = tmpStr.indexOf(s1Tmp); //tmpStr may have been changed, so calculate it again.
+			tmpPos2 = tmpStr.indexOf(s2Tmp);
 			if (tmpPos1 > tmpPos2) {
 				posDirection = -1; //set direction to be -1.
-				String tmp = s1Tmp;
-				s1Tmp = s2Tmp;
-				s2Tmp = tmp;
+				String tmp = s1;
+				s1 = s2;
+				s2 = tmp;
+			}
+
+			if (posDirection != -1) {
+				// get a correct s1 if there is "-" in s1 in order to get a correct position for s2.
+				boolean b1 = (s1.indexOf("-") != -1);
+				if (b1) {
+					/* 
+					 * align the six acquired sequences in sposArr1 and sposArr2 before s1(including s1), and put  
+					 * the correct sequence of s1 into arrList2. Then recalculate the offset of subS1 (we would get a new s1).
+					 */
+					if (i == 1) { //get the previous four sequences
+						String[] alignedStrs = new String[4];
+						alignedStrs[0] = arrList1.get(0);
+						alignedStrs[1] = arrList2.get(0);
+						alignedStrs[2] = arrList1.get(1);
+						alignedStrs[3] = arrList2.get(1);
+						int[] startPos = new int[4];
+						startPos[0] = sposArr1[0];
+						startPos[1] = sposArr2[0];
+						startPos[2] = sposArr1[1];
+						startPos[3] = sposArr2[1];
+						s1 = getCorrectS1(alignedStrs, startPos);
+					} else if (i >= 2) { //get the previous six sequences
+						String[] alignedStrs = new String[6];
+						alignedStrs[0] = arrList1.get(i-2);
+						alignedStrs[1] = arrList2.get(i-2);
+						alignedStrs[2] = arrList1.get(i-1);
+						alignedStrs[3] = arrList2.get(i-1);
+						alignedStrs[4] = arrList1.get(i);
+						alignedStrs[5] = arrList2.get(i);
+						int[] startPos = new int[6];
+						startPos[0] = sposArr1[i-2];
+						startPos[1] = sposArr2[i-2];
+						startPos[2] = sposArr1[i-1];
+						startPos[3] = sposArr2[i-1];
+						startPos[4] = sposArr1[i];
+						startPos[5] = sposArr2[i];
+						s1 = getCorrectS1(alignedStrs, startPos);
+					}
+					arrList2.set(i, s1);
+				}
 			}
 			
-			// find all the "-" in s1 which is in front of subS1 and modify offset.
-			String subS1 = (g.d2.getLocalAlignment(s1Tmp, s2Tmp))[0].replace("-", "");
-			int pos = s1.indexOf("-");
-			int offset = s1Tmp.indexOf(subS1);
-			boolean b1 = (pos != -1) && (pos <= offset); // if there is "-" in front of subS1 in s1.
-			String s3 = arrList1.get(i);
-			boolean b2 = (s3.substring(0, offset+1).indexOf("-") != -1); // if there is "-" in front of subS1 in s2.
-			if (b1 || b2) {
+			//calculate starting position for s2
+			s1Tmp = s1.replace("-", "");
+			s2Tmp = s2.replace("-", "");
+			String[] tStrs = g.d2.getLocalAlignment(s1Tmp, s2Tmp);
+			String subS1 = tStrs[0].replace("-", "");
+			int offset = s1.indexOf(subS1);
+			if (offset == -1) { 
+				for (int idx=0; idx<s1.length(); idx++) {
+					if (s1.charAt(idx) != '-') {
+						int tmpIdx = s1.substring(idx).replace("-", "").indexOf(subS1);
+						if (tmpIdx == 0) {
+							offset = idx;
+							break;
+						}
+					}
+				}
+			} 
+			
+			String subS2 = tStrs[1].replace("-", "");
+			String s3 = arrList2.get(i+1);
+			int tOffset = s2.indexOf(subS2);
+			if (tOffset == -1) { 
+				for (int idx=0; idx<s2.length(); idx++) {
+					if (s2.charAt(idx) != '-') {
+						int tmpIdx = s2.substring(idx).replace("-", "").indexOf(subS2);
+						if (tmpIdx == 0) {
+							if (posDirection == -1) {
+								offset = offset - idx;
+							} else {
+								tOffset = idx;
+							}
+							break;
+						}
+					}
+				}
+			} else {
+				if (posDirection == -1) {
+					offset = offset - tOffset;
+				} 
+			}
+			if (posDirection != -1) {
+				//set s2 and s3 to be correct ones
+				s2 = s2.substring(tOffset);
+				s3 = s3.substring(tOffset);
+				arrList1.set(i+1, s2);
+				arrList2.set(i+1, s3);
+			}
+			
+			//set starting positions
+			offset = offset * posDirection;
+			sposArr1[i+1] = sposArr2[i]+offset;
+			sposArr2[i+1] = sposArr1[i+1];
+
+			// get a correct s2 if there is "-" in s2.
+			s2 = arrList1.get(i+1); // re-get s2 to avoid the effect of exchange and changes on it. 
+			boolean b2 = (s2.indexOf("-") != -1);
+			if (b2) {
 				/* 
-				 * align the six acquired sequences in sposArr1 and sposArr2 before s1(including s1), and put  
-				 * the correct sequence of s1 into arrList2. Then recalculate the offset of subS1 (we would get a new s1).
+				 * align the seven acquired sequences in sposArr1 and sposArr2 before s2(including s1), and put  
+				 * the correct sequence of s2 into arrList1.
 				 */
-				if (i == 1) { //get the previous four sequences
-					String[] alignedStrs = new String[4];
+				if (i == 1) { //get the previous five sequences
+					String[] alignedStrs = new String[5];
 					alignedStrs[0] = arrList1.get(0);
 					alignedStrs[1] = arrList2.get(0);
 					alignedStrs[2] = arrList1.get(1);
 					alignedStrs[3] = arrList2.get(1);
-					int[] startPos = new int[4];
+					alignedStrs[4] = arrList1.get(2);
+					int[] startPos = new int[5];
 					startPos[0] = sposArr1[0];
 					startPos[1] = sposArr2[0];
 					startPos[2] = sposArr1[1];
 					startPos[3] = sposArr2[1];
-					s1 = getCorrectS1(alignedStrs, startPos);
-				} else if (i >= 2) { //get the previous six sequences
-					String[] alignedStrs = new String[6];
+					startPos[4] = sposArr1[2];
+					s2 = getCorrectS1(alignedStrs, startPos);
+				} else if (i >= 2) { //get the previous seven sequences
+					String[] alignedStrs = new String[7];
 					alignedStrs[0] = arrList1.get(i-2);
 					alignedStrs[1] = arrList2.get(i-2);
 					alignedStrs[2] = arrList1.get(i-1);
 					alignedStrs[3] = arrList2.get(i-1);
 					alignedStrs[4] = arrList1.get(i);
 					alignedStrs[5] = arrList2.get(i);
-					int[] startPos = new int[6];
+					alignedStrs[6] = arrList1.get(i+1);
+					int[] startPos = new int[7];
 					startPos[0] = sposArr1[i-2];
 					startPos[1] = sposArr2[i-2];
 					startPos[2] = sposArr1[i-1];
 					startPos[3] = sposArr2[i-1];
 					startPos[4] = sposArr1[i];
 					startPos[5] = sposArr2[i];
-					s1 = getCorrectS1(alignedStrs, startPos);
+					startPos[6] = sposArr1[i+1];
+					s2 = getCorrectS1(alignedStrs, startPos);
 				}
-				arrList2.set(i, s1);
-
-				s1Tmp = s1.replace("-", "");
-				subS1 = (g.d2.getLocalAlignment(s1Tmp, s2Tmp))[0].replace("-", "");
-				offset = s1Tmp.indexOf(subS1);
+				arrList1.set(i+1, s2);
+				arrList2.set(i+1, s2);
 			}
-			offset = offset * posDirection;
-			sposArr1[i+1] = sposArr2[i]+offset;
-			sposArr2[i+1] = sposArr1[i+1];
-		}
+		} //end for
 		
-				
+		
 		// Create an array which stores all the bases with the same position for all the ESTs.
 		int lenOfArray = resultArray[bPoint+1].pos
 						- resultArray[0].pos
@@ -509,27 +631,58 @@ public class NewESTAssembly extends ESTAssembly{
 			String tmpStr1 = arrList1.get(i);
 			int tmpSPos2 = sposArr2[i];
 			String tmpStr2 = arrList2.get(i);
+			
+			//int f=0;
 			for (int j=0; j<tmpStr1.length(); j++) {
 				int p = tmpSPos1+j;
 				if (p < lenOfArray) {
 					tmpArraylists[p].add(tmpStr1.charAt(j));
 				}
+				//if (p==14328) f=1;
 			}
-			for (int j=0; j<tmpStr2.length(); j++) {
+/*			if (f==1) {
+				System.out.println("tmpSPos1="+tmpSPos1);
+				System.out.println(tmpStr1.charAt(14328-tmpSPos1));
+				System.out.println(tmpStr1);
+			}
+			f=0;
+*/			for (int j=0; j<tmpStr2.length(); j++) {
 				int p = tmpSPos2+j;
 				if (p < lenOfArray) {
 					tmpArraylists[p].add(tmpStr2.charAt(j));
 				}
+				//if (p==14328) f=1;
+			}
+/*			if (f==1){
+				System.out.println("tmpSPos2="+tmpSPos2);
+				System.out.println(tmpStr2.charAt(14328-tmpSPos2));
+				System.out.println(tmpStr2);
+			}
+*/		}
+		
+		/* Calculate consensus base for each position, and put them into an char array.
+		 * Do not include those bases with less than 3/5 prepared-bases to remove errors near both ends.
+		 */
+		char[] consensus = new char[lenOfArray];
+		int start = 0;
+		int end = lenOfArray-1;
+		for (int i=0; i<=end; i++) {
+			if (tmpArraylists[i].size() >= 3) {
+				start = i;
+				break;
 			}
 		}
-		
-		// Calculate consensus base for each position, and put them into an char array
-		char[] consensus = new char[lenOfArray];
-		for (int i=0; i<lenOfArray; i++) {
-			consensus[i] = getConsensusBase(tmpArraylists[i]);
+		for (int i=end; i>=start; i--) {
+			if (tmpArraylists[i].size() >= 5) {
+				end = i;
+				break;
+			}
+		}
+		for (int i=start; i<=end; i++) {
+			consensus[i-start] = getConsensusBase(tmpArraylists[i]);
 		}
 		
-		String retStr = String.valueOf(consensus);
+		String retStr = String.valueOf(consensus).substring(0, end-start+1);
 		retStr = retStr.replace("-", "");
 		retStr = retStr.replace(" ", "");
 		

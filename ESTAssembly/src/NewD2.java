@@ -331,7 +331,7 @@ public class NewD2 extends D2{
 		try {
 			score = algorithm.getScore();
 			System.out.println(algorithm.getPairwiseAlignment().getGappedSequence1());
-			//System.out.println(algorithm.getPairwiseAlignment().getGappedSequence2());
+			System.out.println(algorithm.getPairwiseAlignment().getGappedSequence2());
 			//System.out.println(algorithm.getPairwiseAlignment());
 			//String tmp = algorithm.getPairwiseAlignment().toString();
 			//System.out.println(tmp);
@@ -387,10 +387,10 @@ public class NewD2 extends D2{
 		}
 		
 		NewD2 d2 = new NewD2(props);
-		String s2 = "AGCTTTTTGGGAGAGAGCTGCCACTGTCTCAGGTTCGAGGAGCTCATTCAGTGCTGGAAGAGTTGGTGGAGGCGGCTCCCGGGTGCAGCTTGGCTCCGCCAATCCAGGGCTGCACCAGTAACCCCTGCACCAAGGGAGGCACATGTTCAGCACTGCCTAATGGAGGATATTTCTGTAAGTGCACCGCTGCATTCATGGGCACTCACTGTGATGTCACTATCAGCCCTTGTGCCTCTAATCCCTGTCTCTATGGAGGCACATGCATCCCACGAGGAGGAGACTTTTAATGCCAGTGCAGAGGACAGTACTCTGGGCAACGGTGTCAGCTGGGGCCAGCTTTT";
-		String s1 = "GGGAGAGAGCTGCCACTGTCTCAGGTTCGAGGAGCTCATTCAGTGCTGGAAGAGTTGGTGGAGGCGGCTCCCGGGTGCAGCTTGGCTCCGCCAATCCAGGGCTGCACCAGTAACCCCTGCACCAAGGGAGGCACATGTTCAGCACTGCCTAATGGAGGATATTTCTGTAAGTGCACCGCTGCATTCATGGGCACTCACTGTGATGTCACTATCAGCCCTTGTGCCTCTAATCCCTGTCTCTATGGAGGCACATGCATCCCACGAGGAGGAGACTTTTAATGCCAGTGCAGAGGACAGTACTCTGGGCAACGGTGTCAGCTGGGGCC";
-		//System.out.println(d2.getSimlarityScore(s1,s2));
-		//System.out.println(d2.getLocalSimlarityScore(s1,s2));
+		String s2 = "ATCGATCGATGATCGGTTTTACCTGCAG";
+		String s1 = "ACTGATCGATGATCGGTTTTACCTGCAG";
+		System.out.println(d2.getSimlarityScore(s1,s2));
+		System.out.println(d2.getLocalSimlarityScore(s1,s2));
 		//int offset = s1.indexOf(s2);
 		//System.out.println("offset=" + offset);
 		//System.out.println(d2.getDistance(s1,s2));
@@ -398,10 +398,7 @@ public class NewD2 extends D2{
 		//s2 = s2.toUpperCase();
 		//int tmp[] = new int[2];
 		//tmp = d2.getOVLDistance(s1, s2);
-		//System.out.println(tmp[1] + " " + tmp[0]);
-		int[] result = d2.getOVLDistance(s1, s2);
-		System.out.println("length = "+result[0]);
-		System.out.println("distance = "+result[1]);
+		//System.out.println(tmp[0] + " " + tmp[1]);
 	}
 
 }
