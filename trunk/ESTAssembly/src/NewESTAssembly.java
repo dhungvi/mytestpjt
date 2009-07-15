@@ -360,7 +360,7 @@ public class NewESTAssembly extends ESTAssembly{
 		String maxLastStr = lastEsts.get(indexOfMax);
 		ArrayList<String> tmpStr1 = new ArrayList<String>(); //will be processed
 		ArrayList<String> tmpStr2 = new ArrayList<String>(); //won't be processed
-		tmpStr1.add(s.get(indexOfMax));
+		tmpStr1.add(s.get(indexOfMax)); //tmpStr1 has at least one element
 		for (int i=0; i<s.size(); i++) {
 			if (i != indexOfMax) {
 				if (lastEsts.get(i).compareToIgnoreCase(maxLastStr) == 0) {
@@ -396,8 +396,16 @@ public class NewESTAssembly extends ESTAssembly{
 			retStr = retStr + tmpStr1.get(0);
 		}
 		
+		String tmpRetStr = retStr;
 		for (int i=0; i<tmpStr2.size(); i++) {
-			retStr = retStr + "\n" + tmpStr2.get(i);
+			//retStr = retStr + "\n" + tmpStr2.get(i);
+			String tStr = tmpStr2.get(i);
+			double dis = g.d2.getLocalSimlarityScore(tmpRetStr, tStr);
+			if ((dis/tStr.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
+				System.out.println(tmpRetStr);
+				System.out.println(tStr);
+				retStr = retStr + "\n" + tStr;
+			}
 		}
 		
 		return retStr;
@@ -517,7 +525,23 @@ public class NewESTAssembly extends ESTAssembly{
 				}
 			}
 			
-			//calculate starting position for s2
+			/*calculate starting position for s2
+			 * 1. Find the position of subS1 in s1, we name it as offset.
+			 * 2. Get starting position of s2.
+			 * 	Note that subS1 and subS2 may not be the overlap of s1 and s2, they can be shorter than the overlap.
+			 * 	For example, 
+			 * 		GAGACAAGACAAGGCTCTCCCCAAGTCCACTAGTTCAGACGGGACA
+			 *                            CTGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGC
+			 *  subS1 will be: GTCCACTAGTTCAGACGGGACA, not AAGTCCACTAGTTCAGACGGGACA.
+			 *  
+			 *  So we will find the position of subS2 in s2, and replace s2 with the new one, that is: 
+			 *  GTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGC. Correspondingly, we will replace s3 with the substring
+			 *  of the old s3 which corresponds to the new s2.
+			 *  
+			 *  3. If there is "-" in the new s2, we will correct it. Because "-" in s2 means there may be some error
+			 *  in s3, which will affect the starting position of the following sequence.
+			 */
+			//get the position of subS1 in s1.
 			s1Tmp = s1.replace("-", "");
 			s2Tmp = s2.replace("-", "");
 			String[] tStrs = g.d2.getLocalAlignment(s1Tmp, s2Tmp);
@@ -534,7 +558,7 @@ public class NewESTAssembly extends ESTAssembly{
 					}
 				}
 			} 
-			
+			//get the starting position for s2
 			String subS2 = tStrs[1].replace("-", "");
 			String s3 = arrList2.get(i+1);
 			int tOffset = s2.indexOf(subS2);
@@ -638,11 +662,11 @@ public class NewESTAssembly extends ESTAssembly{
 				if (p < lenOfArray) {
 					tmpArraylists[p].add(tmpStr1.charAt(j));
 				}
-				//if (p==14328) f=1;
+				//if (p==14575) f=1;
 			}
 /*			if (f==1) {
 				System.out.println("tmpSPos1="+tmpSPos1);
-				System.out.println(tmpStr1.charAt(14328-tmpSPos1));
+				System.out.println(tmpStr1.charAt(14575-tmpSPos1));
 				System.out.println(tmpStr1);
 			}
 			f=0;
@@ -651,12 +675,12 @@ public class NewESTAssembly extends ESTAssembly{
 				if (p < lenOfArray) {
 					tmpArraylists[p].add(tmpStr2.charAt(j));
 				}
-				//if (p==14328) f=1;
+				//if (p==14575) f=1;
 			}
 /*			if (f==1){
 				System.out.println("tmpSPos2="+tmpSPos2);
-				System.out.println(tmpStr2.charAt(14328-tmpSPos2));
-				System.out.println(tmpStr2);
+				System.out.println(tmpStr2.charAt(14575-tmpSPos2));
+				System.out.println(tmpStr2+"\n\n");
 			}
 */		}
 		
@@ -678,6 +702,8 @@ public class NewESTAssembly extends ESTAssembly{
 				break;
 			}
 		}
+		
+		//System.out.println("start=" + start + "; end=" + end);
 		for (int i=start; i<=end; i++) {
 			consensus[i-start] = getConsensusBase(tmpArraylists[i]);
 		}
@@ -702,9 +728,20 @@ public class NewESTAssembly extends ESTAssembly{
 	 * to the last element in strs from the consensus.
 	 */
 	private String getCorrectS1(String[] strs, int[] pos) {
-		// Create an array which stores all the bases with the same position.
+		int minPos = INT_MAX;
+		int maxPos = 0;
 		int len = strs.length;
-		int lenOfArray = pos[len-1] - pos[0] + strs[len-1].length();
+		for (int i=0; i<len; i++) {
+			if (pos[i] < minPos) {
+				minPos = pos[i];
+			}
+			if (pos[i] > maxPos) {
+				maxPos = pos[i];
+			}
+		}
+		
+		// Create an array which stores all the bases with the same position.
+		int lenOfArray = pos[len-1] - minPos + strs[len-1].length();
 		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
 		for (int i=0; i<lenOfArray; i++) {
 			tmpArraylists[i] = new ArrayList<Character>();
@@ -712,7 +749,7 @@ public class NewESTAssembly extends ESTAssembly{
 
 		// Put all the bases into the array
 		for (int i=0; i<len; i++) {
-			int tmpSPos = pos[i] - pos[0];
+			int tmpSPos = pos[i] - minPos;
 			String tmpStr = strs[i];
 			for (int j=0; j<tmpStr.length(); j++) {
 				int p = tmpSPos+j;
@@ -729,7 +766,7 @@ public class NewESTAssembly extends ESTAssembly{
 		}
 		
 		String retStr = String.valueOf(consensus);
-		retStr = retStr.substring(pos[len-1]-pos[0]);
+		retStr = retStr.substring(pos[len-1]-minPos);
 
 		return retStr;
 	}
