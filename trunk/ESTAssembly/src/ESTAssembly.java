@@ -15,7 +15,7 @@ import com.mhhe.clrs2e.*;
 public class ESTAssembly {
 	int INT_MAX = 2147483647;
 	int INT_MIN = -2147483647;
-	String oriFileName;	//store the original gene data. It's used in "printEsts" method.
+	String oriFileName;	//store the original gene data. 
 	String mstFile;	//store the MST. It is generated from PEACE.
 	String inFileName;
 	String resultFileName;
@@ -29,12 +29,12 @@ public class ESTAssembly {
 	/*
 	 * store the position of aligned nodes
 	 * 1st-dimension: index of nodes in graph;
-	 * 2rd-dimension: the first is the index of node on the left, 
-	 * 					the second is the overlap length with + or -,
-	 * 					the third is the index of node on the right, 
-	 * 					the forth is the overlap length with + or -.
-	 * 					For the first and third one, if no node is found, the value is -1;
-	 * 					For the second and fourth one, if no node is found, the value is infinite.	 
+	 * 2rd-dimension: 	the first is the index of node on the left, 
+	 * 					the second is the overlap length with + or -.
+	 * 					the third is the distance with + or -.
+	 * 					the fourth is the index of node on the right, t
+	 * 					the fifth is the overlap length with + or -.
+	 * 					the sixth is the distance with + or -.
 	 */
 	int alignArray[][];
 	int[] sPos;	//starting positions of all the nodes, initialized in "processAlignArray" function.
@@ -88,8 +88,9 @@ public class ESTAssembly {
 				str = str.trim();
 				// first line is comment line which begins from '>'
 				if (str.charAt(0) == '>') {	//comment line begins from '>'
-					String[] paras = str.split("_");
-					ests.add(paras[1]);
+					//String[] paras = str.split("_");
+					//ests.add(paras[1]);
+					ests.add("0");
 					
 					//get est in the next lines
 					str = in.readLine();
@@ -127,8 +128,6 @@ public class ESTAssembly {
 	}
 	
 	public void createAlignArray() {
-		//alignArray = g.alignNodes();	
-		//mstForG = g.genMST();
 		mstForG = g.readMST(mstFile);
 		System.out.println("End to generate MST.");
 		System.out.println("Start to generate 6-tuples.");
@@ -136,7 +135,7 @@ public class ESTAssembly {
 	}
 
 	/* 
-	 * Get the assumed left-most node(alignNodes[][0]==-1), check them to find all the real left ends.
+	 * Get the assumed left ends(alignNodes[][0]==-1), check them to find all the real left ends.
 	 */
 	public void processAlignArray() {
 		//get all the nodes which has no left nodes to them
@@ -146,7 +145,7 @@ public class ESTAssembly {
 			}
 		}
 
-		//find the two most closest nodes for those leftmostnodes(because some of them may be falsely left-most)
+		//Re-calculating six-tuples for those assumed left ends and put the new six-tuple into alignArray.
 		int numOfLeftMostNodes = leftMostNodes.size();
 		System.out.println("The number of original left ends is " + numOfLeftMostNodes);
 		if (numOfLeftMostNodes > 1) {
@@ -209,6 +208,7 @@ public class ESTAssembly {
 		 * 		so node 2 is not left end because node 8 is to its left.
 		 */
 		//Get all the nodes which has the value of -1 in alignArray[x][0]
+		/*
 		ArrayList <Integer> tmpLeftNodes = new ArrayList<Integer> ();
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] == -1) {
@@ -231,7 +231,20 @@ public class ESTAssembly {
 			if (f == 0) {
 				leftMostNodes.add(Integer.valueOf(tEnd));
 			}
+		}*/
+		//The following is a different implementation of above segment. It has O(n) runtime and can make the program faster.
+		boolean[][] cond = new boolean[alignArray.length][2];
+		for (int i=0; i<alignArray.length; i++) {
+			cond[i][0] = (alignArray[i][0] == -1);
+			cond[tmpDGraph[i][1]][1] = true;
 		}
+		leftMostNodes.clear();
+		for (int i=0; i<alignArray.length; i++) {
+			if (cond[i][0] && !cond[i][1]) {
+				leftMostNodes.add(Integer.valueOf(i));
+			}
+		}
+	
 		
 		//print mst
 		//System.out.println("Original minimum Spanning Tree:");
@@ -244,8 +257,8 @@ public class ESTAssembly {
 		
 		/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
 		 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which 
-		 * makes six-tuple[0] != -1, then return the six-tuple.
-		 * If we fail to find any node after running out of all the nodes in the MST, we consider it a real left end.
+		 * makes six-tuple[0] != -1 or until the level we specified in the property file, then return the six-tuple.
+		 * If we fail to find any node, we consider it a real left end.
 		 */
 		for (int i=0; i<leftMostNodes.size(); i++) {
 			int tEnd = leftMostNodes.get(i).intValue(); //index of the node
@@ -332,26 +345,6 @@ public class ESTAssembly {
 			System.out.println();
 		}
 
-	}
-	
-	/* 
-	 * Calculate starting positions for each node
-	 */
-	protected void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree) {
-		WeightedEdgeIterator ite = (WeightedEdgeIterator) tree.edgeIterator(parentNode);
-		while (ite.hasNext()) {
-			Vertex v = (Vertex) ite.next();
-			int index = v.getIndex();
-			int overlapLen = (int) Math.abs(ite.getWeight());
-			if (parentNode == 0) { // it's left end node actually
-				sPos[index] = sPos[parentNode] + g.getLenOfNode(leftEnd) - overlapLen;
-			} else if (parentNode == leftEnd) { // it's node 0 actually
-				sPos[index] = sPos[parentNode] + g.getLenOfNode(0) - overlapLen;
-			} else {
-				sPos[index] = sPos[parentNode] + g.getLenOfNode(parentNode) - overlapLen;
-			}
-			getStartPos(index, leftEnd, tree);
-		}
 	}
 	
 	/* 
@@ -482,7 +475,7 @@ public class ESTAssembly {
 		//printDgraph(dGraph);
 		
 		/*
-		 *  1. print information of all the left-end nodes.
+		 *  1. Print information of all the left-end nodes. It include:
 		 *  	starting position of the node;
 		 * 		whether or not they are real left ends;
 		 * 		If they are false left ends, print the overlap length they have with other nodes.
@@ -491,7 +484,7 @@ public class ESTAssembly {
 		 *  		put left-end node to index 0 in order to get the MST we want. If Prim does 
 		 *  		not start from the left-end node, the directed tree will be unconnected.
 		 *     Then reconstruct the sequence from the set of ESTs.
-		 *     Return all the generated sequences which are separated by feedline.
+		 *     Return all the generated sequences which are separated by newline character.
 		 */
 		WeightedAdjacencyListGraph primMST = null;
 		String retStr = "";
@@ -521,7 +514,6 @@ public class ESTAssembly {
 			
 			//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
 			sPos[leftEnd] = sPos[0];
-			//sPos[0] = Integer.parseInt(g.getNameOfNode(leftEnd)); //starting position of the node
 			sPos[0] = 0; //starting position of the left end is assigned to be 0.
 			//get starting positions for the nodes in primMST
 			getStartPos(0, leftEnd, primMST, dGraph);
@@ -643,8 +635,8 @@ public class ESTAssembly {
 			String tStr = tmpStr2.get(i);
 			double dis = g.d2.getLocalSimlarityScore(tmpRetStr, tStr);
 			if ((dis/tStr.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
-				System.out.println(tmpRetStr);
-				System.out.println(tStr);
+				//System.out.println(tmpRetStr);
+				//System.out.println(tStr);
 				retStr = retStr + "\n" + tStr;
 			}
 		}
@@ -1062,9 +1054,7 @@ public class ESTAssembly {
 	}
 	
 	/*
-	 * overload the same-name method of parent class.
-	 * print the original sequence and multiple consensus into a file which is specified in the property file.
-	 * The printed consensuses start from all the assumed starting position.
+	 * Print the original sequence and multiple consensus into a file which is specified in the property file.
 	 */
 	public void printConsensus() {
 		try{ 
@@ -1130,8 +1120,7 @@ public class ESTAssembly {
 
 	
 	/* 
-	 * The same-name method as the parent class. But it adds one more parameter d.
-	 * Calculate starting positions for each node. Assign the real starting position to the left end.
+	 * Calculate starting positions for each node. 
 	 */
 	
 	protected void getStartPos(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree, int[][] d) {
@@ -1201,7 +1190,6 @@ public class ESTAssembly {
 		
 		//assemble.printSPos();
 		//assemble.printConsensus();
-		//assemble.printEsts();
 		//assemble.calcInversion();
 		
 		time1 = new GregorianCalendar().getTimeInMillis();
