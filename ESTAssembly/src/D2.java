@@ -15,9 +15,6 @@ import neobio.alignment.SmithWaterman;
 
 /**
  * This class implements the D2 algorithm. Feb 15, 2009.
- * In this version, the author does not use any skills to make D2 faster.
- * It is a naive implementation of D2. That is, compare all the windows between
- * s1 and s2, and then get the minimum value of sed.
  * 
  * Note: we need change the method 'initWords' to generate more words if boundOfWord changes.
  */
@@ -25,8 +22,6 @@ import neobio.alignment.SmithWaterman;
 public class D2 {
 	protected final int INT_MAX = 2147483647;
 	protected int windowSize;	// the size of window
-	//private int ovlWindowSize = 0;// the window size for overlap distance, it is assigned 
-								// in 'getOVLDistance' with the value of overlap length.
 	protected final int boundOfWord; 	// the upper bound and the lower bound have the same value
 	protected int THRESHOLD;	// THRESHOLD = [(windowSize)-(boundOfWord)+1]^2
 						// if the d2 distance is bigger than the threshold, we consider it to be infinite(=INT_MAX).
@@ -153,11 +148,11 @@ public class D2 {
 
 	/**
 	 * Get the overlap distance of the two strings. 
-	 * This function is different from the same-name method in its parent class in that 
-	 * 	1) It tries to find the position with the minimal d2 distance instead of that with 
-	 * 		the same value as the edge;
-	 * 	2) It uses alignment to get the similarity value of two substrings instead of using
-	 * 		d2. And it sets the similarity value to be the overlap distance of s1 and s2.
+	 * This function 
+	 * 	1) tries to find the position with the minimal d2 distance;
+	 * 	2) uses alignment to get the similarity value of two substrings. And it sets 
+	 * 		the similarity value to be the overlap distance of s1 and s2.
+	 * 
 	 * The function finds the position in s2 which has the smallest d2 distance between s1's first window and 
 	 * s2 or between s1's last window and s2. If it finds the position, it returns the overlap length and the
 	 * overlap distance of the two strings. If not, it returns INT_MAX. If it finds two positions for both the 
@@ -340,9 +335,6 @@ public class D2 {
 	}
 
 	/**
-	 * This function is different from the same-name method in its parent class in that It tries to find the position 
-	 * with the minimal d2 distance instead of that with the same value as the edge.
-	 * 
 	 * Get the window position in string 's2' such that the d2 distance between the two input string is minimal. 
 	 * If multiple positions are found, the function will return all of them.
 	 * If no position is found, the function will return an empty array.
@@ -359,7 +351,7 @@ public class D2 {
 	}
 
 	/*
-	 * calculate the distance of two strings.
+	 * Calculate the distance of two strings.
 	 * dis = (1 - similarityScore/lengthOfLongerString)*a, actually, in our case, s1 has the same length as s2. 
 	 * Now, we set a=100. So the return value would be [0, 100]
 	 * @param s1, s2
@@ -568,6 +560,7 @@ public class D2 {
 		if ((dis/s2.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
 			System.out.println("dis=" + dis + "; len=" + s2.length());
 		}
+		
 	}
 	
 	//only used for test by main

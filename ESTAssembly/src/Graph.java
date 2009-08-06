@@ -15,11 +15,13 @@ public class Graph {
 	protected final int INT_MIN = -2147483647;
 	private final int num = 5;	//specify the number of the closest nodes the program finds for one node;
 								//function 'getNClosestNodes' uses 'num' as parameter.
+	private int numOfLevels;
 
 	ArrayList<Node> graphNodes;
 	D2 d2;
 	
 	public Graph(Properties p) {
+		numOfLevels = Integer.parseInt(p.getProperty("NumOfLevels"));
 		graphNodes = new ArrayList<Node> ();
 		d2 = new D2(p);
 	}
@@ -134,14 +136,6 @@ public class Graph {
 	 */
 	public int[][] get2CloseNodesFromMST(WeightedAdjacencyListGraph mst) {
 		int nOfNodes = mst.getCardV();
-		/*
-		 * store the position of aligned nodes
-		 * 1st-dimension: index of nodes in graph;
-		 * 2rd-dimension: the first is the index of node on the left, 
-		 * 					the second is the overlap length with + or -,
-		 * 					the third is the index of node on the right, 
-		 * 					the forth is the overlap length with + or -.
-		 */
 		int[][] alignedNodes = new int[nOfNodes][6];
 		
 		for (int i=0; i<nOfNodes; i++) {
@@ -158,10 +152,6 @@ public class Graph {
 				int index = v.getIndex();
 				int[] ovlDis = (d2).getOVLDistance(graphNodes.get(i).getNodeStr(), 
 												graphNodes.get(index).getNodeStr());
-				//int[] ovlDis = d2.getOVLDistance(graphNodes.get(i).getNodeStr(), 
-				//		graphNodes.get(index).getNodeStr(),
-				//		(int)ite.getWeight());
-				//if (ovlDis[0] != 0) {	// there is overlap between them
 				if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 					if (ovlDis[0] < 0) {
 						if (ovlDis[1] > maxLeft){
@@ -207,32 +197,22 @@ public class Graph {
 	 * Get two closest nodes which is on the left and on the right to the 'index' node
 	 * from the input minimum spanning tree, and store the data into an array.
 	 * To get the six-tuple for the node, the function calculates distance from 
-	 * this node to: its parent, its children, its grandparent, its grand-children, its
-	 * grand-grand-parent and its grand-grand-children. 
+	 * this node to all the other nodes which are less than or equal to three levels from it. 
 	 * 
 	 * 
 	 * @param mst a Minimum Spanning Tree.
 	 * @param index The index of current node in the tree and graph.
 	 * @param sixTuple The six tuple for this node with the index
-	 * @return an array which stores two closest nodes which is to the left and to the right 
-	 * respectively for all the nodes in the tree. 
-	 * 		1st-dimension: index of nodes in the graph 'graphNodes';
-	 * 		2rd-dimension: the first is the index of node on the left, the second is the overlap length with + or -.
+	 * @return six-tuple for the current node which has the input "index". 
+	 *						the first is the index of node on the left, the second is the overlap length with + or -.
 	 * 						the third is the distance with + or -.
 	 * 						the fourth is the index of node on the right, the fifth is the overlap length with + or -.
 	 * 						the sixth is the distance with + or -.
 	 * 						For the first and fourth one, if no node is found, the value is -1;
-	 * 						For others, if no node is found, the value is infinite.
+	 * 						For the second and fifth one, if no node is found, the value is 0;
+	 * 						For the third and sixth one, if no node is found, the value is INT_MIN or INT_MAX.
 	 */
 	public int[] get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, int[] sixTuple) {
-		/*
-		 * store the position of aligned nodes
-		 * 1st-dimension: index of nodes in graph;
-		 * 2rd-dimension: the first is the index of node on the left, 
-		 * 					the second is the overlap length with + or -,
-		 * 					the third is the index of node on the right, 
-		 * 					the forth is the overlap length with + or -.
-		 */
 		int[] closeNode = new int[6];
 		
 		int leftNode = -1;
@@ -321,25 +301,22 @@ public class Graph {
 	}
 
 	/**
-	 * Recalculate 6-tuples for an assumed left end in order to remove all the false left ends.
+	 * Recalculate 6-tuples for an assumed left end in order to make sure it is a real left end.
 	 * Specifically, for the assumed left end,start to calculate from fourth level until meeting one node which 
-	 * makes six-tuple[][0] != -1, then return the six-tuple.
-	 * If we fail to find any node after running out of all the nodes in the MST, we consider it a real left end
-	 * and six-tuple[][0] == -1.
+	 * makes six-tuple[][0] != -1, or until the level we specified in the property file, then return the six-tuple.
+	 * If we fail to find any node, we consider it a real left end and six-tuple[][0] will be set to be -1.
 	 * 
 	 * @param mst a Minimum Spanning Tree.
 	 * @param index The index of current node in the tree and graph.
 	 * @param sixTuple The six tuple for this node with the index
 	 * @return an array which stores two closest nodes which is to the left and to the right if it is not left end;
 	 * if it does, six-tuple[][0] = -1.
-	 * 		1st-dimension: index of nodes in the graph 'graphNodes';
-	 * 		2rd-dimension: the first is the index of node on the left, the second is the overlap length with + or -.
-	 * 						the third is the index of node on the right, the fourth is the overlap length with + or -.
-	 * 						For the first and third one, if no node is found, the value is -1;
-	 * 						For the second and fourth one, if no node is found, the value is infinite.
 	 */
 	public int[] checkLeftEndFromMST(WeightedAdjacencyListGraph mst, int index, int[] sixTuple) {
-		for (int foundLevel=4; ; foundLevel++) {
+		if (numOfLevels == 0) { //keep checking until leaves
+			numOfLevels = INT_MAX;
+		}
+		for (int foundLevel=4; foundLevel<=numOfLevels; foundLevel++) {
 			ArrayList<Vertex> allNodes = new ArrayList<Vertex> ();
 			allNodes = getNodesFromMST(mst, index, foundLevel, 0, -1, allNodes);
 
