@@ -208,7 +208,7 @@ public class ESTAssembly {
 		 * 		so node 2 is not left end because node 8 is to its left.
 		 */
 		//Get all the nodes which has the value of -1 in alignArray[x][0]
-		/*
+		
 		ArrayList <Integer> tmpLeftNodes = new ArrayList<Integer> ();
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] == -1) {
@@ -231,19 +231,27 @@ public class ESTAssembly {
 			if (f == 0) {
 				leftMostNodes.add(Integer.valueOf(tEnd));
 			}
-		}*/
+		}
 		//The following is a different implementation of above segment. It has O(n) runtime and can make the program faster.
-		boolean[][] cond = new boolean[alignArray.length][2];
+		/*boolean[][] cond = new boolean[alignArray.length][2];
 		for (int i=0; i<alignArray.length; i++) {
 			cond[i][0] = (alignArray[i][0] == -1);
-			cond[tmpDGraph[i][1]][1] = true;
+			if (i <= tLen) {
+				cond[tmpDGraph[i][1]][1] = true;
+			}
 		}
+		if (alignArray.length > tLen) {
+			for (int i=alignArray.length; i<tLen; i++) {
+				cond[tmpDGraph[i][1]][1] = true;
+			}
+		}
+		
 		leftMostNodes.clear();
 		for (int i=0; i<alignArray.length; i++) {
 			if (cond[i][0] && !cond[i][1]) {
 				leftMostNodes.add(Integer.valueOf(i));
 			}
-		}
+		}*/
 	
 		
 		//print mst
@@ -437,7 +445,7 @@ public class ESTAssembly {
 		/*
 		 * Calculate the length of dGraph.
 		 */
-		//Get all the nodes which has the value of -1 in alignArray[x][0]
+
 		int len = 0;
 		for (int i=0; i<alignArray.length; i++) {
 			if (alignArray[i][0] != -1) {
@@ -496,7 +504,7 @@ public class ESTAssembly {
 			int leftEnd = leftMostNodes.get(i).intValue();
 			printLeftEndInfo(leftEnd);
 			
-			// Calculate starting positions using maximum spanning tree starting from this left-end node.
+			// Calculate starting positions using minimum spanning tree starting from this left-end node.
 			for (int t=0; t<dGraph.length; t++) {
 				//exchange index of node 0 and the left-end node so as Prim starts from the left end.
 				if (dGraph[t][0] == 0) {
@@ -1161,7 +1169,6 @@ public class ESTAssembly {
         return props;
     }
 
-	
 	public static void main(String[] args) {
 		Properties props = null;
 		try {
