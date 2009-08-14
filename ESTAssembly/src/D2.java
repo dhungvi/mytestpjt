@@ -109,18 +109,26 @@ public class D2 {
 				}
 			}*/
 			
-			ValObj vo = words.get(firstWord);
-			if (vo == null) System.out.println("firstWord = " + firstWord + " includes unexpected character!");
+			int sed = initSed;
 			
-			int orgFirstValue = (int)Math.pow((vo.v1 - vo.v2), 2);
-			vo.v2 -= 1;
-			int sed = initSed - orgFirstValue + (int)Math.pow((vo.v1 - vo.v2), 2);
+			ValObj vo = words.get(firstWord);
+			if (vo == null) {
+				System.out.println("firstWord = " + firstWord + " includes unexpected character!");
+			} else {
+				int orgFirstValue = (int)Math.pow((vo.v1 - vo.v2), 2);
+				vo.v2 -= 1;
+				sed = sed - orgFirstValue + (int)Math.pow((vo.v1 - vo.v2), 2);
+			}
+			
 			
 			vo = words.get(lastWord);
-			if (vo == null) System.out.println("lastWord = " + lastWord + " includes unexpected character!");
-			int orgLastValue = (int)Math.pow((vo.v1 - vo.v2), 2);
-			vo.v2 += 1;
-			sed = sed - orgLastValue + (int)Math.pow((vo.v1 - vo.v2), 2);
+			if (vo == null) {
+				System.out.println("lastWord = " + lastWord + " includes unexpected character!");
+			} else {
+				int orgLastValue = (int)Math.pow((vo.v1 - vo.v2), 2);
+				vo.v2 += 1;
+				sed = sed - orgLastValue + (int)Math.pow((vo.v1 - vo.v2), 2);
+			}
 			
 			if (sed > THRESHOLD) {
 				disArray[i] = INT_MAX;
