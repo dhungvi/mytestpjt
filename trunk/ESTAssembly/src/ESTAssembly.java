@@ -164,6 +164,45 @@ public class ESTAssembly {
 			}
 		} 
 		
+		
+		leftMostNodes.clear();
+		for (int i=0; i<alignArray.length; i++) {
+			if (alignArray[i][0] == -1) {
+				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
+			}
+		}
+		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after running 3 levels.");
+		
+		/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
+		 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which 
+		 * makes six-tuple[0] != -1 or until the level we specified in the property file, then return the six-tuple.
+		 * If we fail to find any node, we consider it a real left end.
+		 */
+		for (int i=0; i<leftMostNodes.size(); i++) {
+			int tEnd = leftMostNodes.get(i).intValue(); //index of the node
+			int[] tmpTuple = g.checkLeftEndFromMST(mstForG, tEnd, alignArray[tEnd]);
+			if (tmpTuple != null) {
+				alignArray[tEnd][0] = tmpTuple[0];
+				alignArray[tEnd][1] = tmpTuple[1];
+				alignArray[tEnd][2] = tmpTuple[2];
+				alignArray[tEnd][3] = tmpTuple[3];
+				alignArray[tEnd][4] = tmpTuple[4];
+				alignArray[tEnd][5] = tmpTuple[5];
+				
+			}
+		}
+		
+		leftMostNodes.clear();
+		for (int i=0; i<alignArray.length; i++) {
+			if (alignArray[i][0] == -1) {
+				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
+			}
+		}
+		System.out.println("\nThere are " + leftMostNodes.size() + " left-most nodes after checking left ends.");
+		
+		
+		
+		
 		/* construct a temporary directed graph from alignArray, 
 		 *  	the second dimension has two elements:
 		 *  			index of starting node,
@@ -232,88 +271,15 @@ public class ESTAssembly {
 				leftMostNodes.add(Integer.valueOf(tEnd));
 			}
 		}
-		//The following is a different implementation of above segment. It has O(n) runtime and can make the program faster.
-		/*boolean[][] cond = new boolean[alignArray.length][2];
-		for (int i=0; i<alignArray.length; i++) {
-			cond[i][0] = (alignArray[i][0] == -1);
-			if (i <= tLen) {
-				cond[tmpDGraph[i][1]][1] = true;
-			}
-		}
-		if (alignArray.length > tLen) {
-			for (int i=alignArray.length; i<tLen; i++) {
-				cond[tmpDGraph[i][1]][1] = true;
-			}
-		}
-		
-		leftMostNodes.clear();
-		for (int i=0; i<alignArray.length; i++) {
-			if (cond[i][0] && !cond[i][1]) {
-				leftMostNodes.add(Integer.valueOf(i));
-			}
-		}*/
-	
-		
-		//print mst
-		//System.out.println("Original minimum Spanning Tree:");
-		//System.out.println(mstForG);
-		//print tmpDGraph
-		//System.out.println("dGraph:");
-		//printDgraph(tmpDGraph);
-		
-		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after re-running 3 levels.");
-		
-		/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
-		 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which 
-		 * makes six-tuple[0] != -1 or until the level we specified in the property file, then return the six-tuple.
-		 * If we fail to find any node, we consider it a real left end.
-		 */
-		for (int i=0; i<leftMostNodes.size(); i++) {
-			int tEnd = leftMostNodes.get(i).intValue(); //index of the node
-			int[] tmpTuple = g.checkLeftEndFromMST(mstForG, tEnd, alignArray[tEnd]);
-			if (tmpTuple != null) {
-				alignArray[tEnd][0] = tmpTuple[0];
-				alignArray[tEnd][1] = tmpTuple[1];
-				alignArray[tEnd][2] = tmpTuple[2];
-				alignArray[tEnd][3] = tmpTuple[3];
-				alignArray[tEnd][4] = tmpTuple[4];
-				alignArray[tEnd][5] = tmpTuple[5];
-			}
-		}
-		
-		/*
-		 * Re-find those left ends.
-		 */
-		//Get all the nodes which has the value of -1 in alignArray[x][0]
-		leftMostNodes.clear();
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i][0] == -1) {
-				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
-			}
-		}
-		System.out.println("\nThere are " + leftMostNodes.size() + " left-most nodes after checking left ends.");
+		System.out.println("\nThere are " + leftMostNodes.size() + " left-most nodes after processing.");
 	}
 
 	
-	protected WeightedAdjacencyListGraph constructMaxTree(int nOfNodes, int[][] g) {
-		// Make a directed graph.
-		WeightedAdjacencyListGraph dGraph =
-		    new WeightedAdjacencyListGraph(nOfNodes, true);
-		for (int i=0; i<nOfNodes; i++) {
-			dGraph.addVertex(i, Integer.toString(i));
-		}
-		for (int j=0; j<g.length; j++) {
-			dGraph.addEdge(g[j][0], g[j][1], -g[j][2]);
-		}
-		WeightedAdjacencyListGraph mst = (new Prim()).computeMST(dGraph);
-		return mst;
-	}
-
 
 	/*
 	 * print elements in 'dGraph'
 	 */
-	protected void printDgraph(int[][] d){
+	private void printDgraph(int[][] d){
 		for (int i=0; i<d.length; i++) {
 			System.out.println(d[i][0] + "\t" + d[i][1] + "\t" + d[i][2] + "\t" + d[i][3]);
 		}
@@ -326,7 +292,7 @@ public class ESTAssembly {
 	 * 		whether or not they are real left ends;
 	 * 		If they are false left ends, print the overlap length they have with other nodes.
 	 */
-	protected void printLeftEndInfo(int leftEnd) {
+	private void printLeftEndInfo(int leftEnd) {
 		int sp = Integer.parseInt(g.getNameOfNode(leftEnd));	//actual starting position of the node
 		System.out.println("Node " + leftEnd + " starts from " + sp);
 		int ln = g.getLenOfNode(leftEnd);
@@ -358,7 +324,7 @@ public class ESTAssembly {
 	/* 
 	 * Print the assembled starting position and the actual position for all the ests
 	 */
-	public void printSPos() {
+	private void printSPos() {
 		System.out.println("Calculated s_i	Actual s_i");
 		for (int i=0; i<sPos.length; i++) {
 			System.out.println(sPos[i] + "	" + g.getNameOfNode(i));
@@ -391,7 +357,7 @@ public class ESTAssembly {
 	/* 
 	 * Calculate inversions for all the calculated positions of ESTs
 	 */
-	public void calcInversion() {
+	private void calcInversion() {
 			//Firstly, sort the array sPos
 			StartPos2[] resultArray = new StartPos2[sPos.length]; //store the starting positions of ests
 			for (int i=0; i<sPos.length; i++) {
@@ -498,6 +464,7 @@ public class ESTAssembly {
 		String retStr = "";
 		ArrayList<String> allConsensus= new ArrayList<String> ();	//store all the generated sequences
 		ArrayList<String> lastEsts = new ArrayList<String> ();
+		ArrayList<String> firstEsts = new ArrayList<String> ();
 		for (int i=0; i<leftMostNodes.size(); i++) {
 			sPos = new int[alignArray.length];	//store starting positions of all the nodes
 
@@ -540,6 +507,7 @@ public class ESTAssembly {
 				}
 			}
 			lastEsts.add(tmpArray.get(tmpArray.size()-1).seq);
+			firstEsts.add(g.getSeqOfNode(leftEnd));
 			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.\n");
 			String tStr = reconstructSeq(tmpArray, 0);
 			allConsensus.add(tStr);
@@ -565,18 +533,98 @@ public class ESTAssembly {
 		int tmpSize = allConsensus.size();
 		if (tmpSize > 1) { 
 			retStr = retStr + "The consensus from above " + tmpSize + " sequences:\n\n";
-			String s = processMoreConsensus(allConsensus, lastEsts);
+			String s = processMoreConsensus(allConsensus, firstEsts, lastEsts);
 			retStr = retStr + s;
 		}
 		return retStr;
 	}
 	
-	/*
-	 * This method may be changed later.
+	 /* 
 	 * This method is used when there are more than one consensus in the assembly.
-	 * According to the results of tests (note that it has not been proved), these consensus originate from 
-	 * more than one left ends which include each other. Although the consensus are different at their beginning, 
-	 * they end with the same characters.
+	 * Then number of consensus is equal to the number of left ends. And the different consensus does not mean that they are 
+	 * not overlapped(or they correspond to different part of the gene). Recall that we treat inclusion as infinite distance, 
+	 * so some left ends may include each other, and consensus from them overlap with each other.
+	 * This method is designed to remove all the dependent consensus and extract all the independent ones, which means, we intend 
+	 * to find all the consensus which represent different part of the gene.. 
+	 * 
+	 * @param s an arraylist which includes all the generated consensus from the calling method;
+	 * 		 	firstEsts an arraylist which includes all the left end sequence corresponding to all the consensus;
+	 * 			lastEsts an arraylist which includes all last est sequence corresponding to all the consensus.
+	 * @return the combined consensus.
+	 */
+	 private String processMoreConsensus(ArrayList<String> s, ArrayList<String> firstEsts, ArrayList<String> lastEsts) {
+		String retStr = "";
+		
+		int sizeOfs = s.size();
+		Consensus[] resultArray = new Consensus[sizeOfs]; //store the starting positions of ests
+		for (int i=0; i<sizeOfs; i++) {
+			resultArray[i] = new Consensus(firstEsts.get(i).length(), s.get(i), firstEsts.get(i), lastEsts.get(i));
+		}
+		MergeSort merge = new MergeSort();
+		merge.sort(resultArray);
+		
+		ArrayList<Consensus> allConsensus = new ArrayList<Consensus> ();
+		for (int i=sizeOfs-1; i>=0; i--) {
+			allConsensus.add(resultArray[i]);
+		}
+		
+		while (true) {
+			String s1 = allConsensus.get(0).firstEst;
+			ArrayList<Consensus> includeStrs = new ArrayList<Consensus>();
+			includeStrs.add(allConsensus.get(0));
+			ArrayList<Consensus> excludeStrs = new ArrayList<Consensus>();
+			for (int i=1; i<allConsensus.size(); i++) {
+				boolean b = g.d2.checkInclusion(allConsensus.get(i).firstEst, s1); //if resultArray[i].firstEst is included in s1
+				if (b) {
+					includeStrs.add(allConsensus.get(i));
+				} else {
+					excludeStrs.add(allConsensus.get(i));
+				}
+			}
+			retStr = retStr  + "\n" + processMoreConsensusWithInclusion(includeStrs);
+			if (excludeStrs.size() == 0) {
+				break;
+			} else {
+				allConsensus = excludeStrs;
+			}
+		}
+
+
+		return retStr;
+	 }
+	 
+	 static class Consensus implements Comparable<Consensus> {
+		 int lenOfFirstEst;
+		 String seq;
+		 String firstEst;
+		 String lastEst;
+		 public Consensus(int p, String s1, String s2, String s3) {
+			 lenOfFirstEst = p;
+			 seq = s1;
+			 firstEst = s2;
+			 lastEst = s3;
+		 }
+
+		 public int compareTo(Consensus other) {
+			 //Returns 0 if the argument is equal to this; 			
+			 //a value less than 0 if the argument is greater than this; 
+			 //and a value greater than 0 if the argument is less than this. 
+			 if (this.lenOfFirstEst == other.lenOfFirstEst) {
+				 return 0;
+			 } else if (this.lenOfFirstEst > other.lenOfFirstEst) {
+				 return 1;
+			 } else {
+				 return -1;
+			 }
+		 }
+	 }	
+
+
+	/*
+	 * This method is called by "processMoreConsensus".
+	 * This method is used to process those consensus which starts from the left ends that include each other.
+	 * These input consensus originate from more than one left ends which include each other. Although the 
+	 * consensus are different at their beginning, they often end with the same characters.
 	 * For example, they will look like:
 	 * AGGCTCTCCCCAAGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
 	 *                       TTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
@@ -585,29 +633,32 @@ public class ESTAssembly {
 	 * 
 	 * So in this method, we reverse all the consensus, and get one consensus from them. 
 	 * 
-	 * change to this method:
-	 * If two consensus ends with the same Est, we process them. If not, we do not process them.
+	 * In some situation, the consensus may not ends with the same character even if their left ends have inclusion.
+	 * In this method, we judge if two consensus ends with the same Est. If it does, we process them. If not, 
+	 * we will judge if the consensus are part of the longer one. If it does, we will return the longer one. If not,
+	 * we will add it to the return string and return it.
 	 */
-	private String processMoreConsensus(ArrayList<String> s, ArrayList<String> lastEsts) {
+	private String processMoreConsensusWithInclusion(ArrayList<Consensus> includeStrs) {
+		//ArrayList<String> s, ArrayList<String> lastEsts
 		int maxLen = 0; //the maximal length of all the strings.
 		int indexOfMax = -1;
-		for (int i=0; i<s.size(); i++) {
-			int tLen = s.get(i).toString().length();
+		for (int i=0; i<includeStrs.size(); i++) {
+			int tLen = includeStrs.get(i).seq.length();
 			if (tLen > maxLen) {
 				maxLen = tLen;
 				indexOfMax = i;
 			}
 		}
-		String maxLastStr = lastEsts.get(indexOfMax);
+		String maxLastStr = includeStrs.get(indexOfMax).lastEst;
 		ArrayList<String> tmpStr1 = new ArrayList<String>(); //will be processed
 		ArrayList<String> tmpStr2 = new ArrayList<String>(); //won't be processed
-		tmpStr1.add(s.get(indexOfMax)); //tmpStr1 has at least one element
-		for (int i=0; i<s.size(); i++) {
+		tmpStr1.add(includeStrs.get(indexOfMax).seq); //tmpStr1 has at least one element
+		for (int i=0; i<includeStrs.size(); i++) {
 			if (i != indexOfMax) {
-				if (lastEsts.get(i).compareToIgnoreCase(maxLastStr) == 0) {
-					tmpStr1.add(s.get(i));
+				if (includeStrs.get(i).lastEst.compareToIgnoreCase(maxLastStr) == 0) {
+					tmpStr1.add(includeStrs.get(i).seq);
 				} else {
-					tmpStr2.add(s.get(i));
+					tmpStr2.add(includeStrs.get(i).seq);
 				}
 			}
 		}
