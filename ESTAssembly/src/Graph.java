@@ -4,6 +4,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
+import java.util.Stack;
 
 import com.mhhe.clrs2e.Prim;
 import com.mhhe.clrs2e.Vertex;
@@ -13,8 +14,6 @@ import com.mhhe.clrs2e.WeightedEdgeIterator;
 public class Graph {
 	protected final int INT_MAX = 2147483647;
 	protected final int INT_MIN = -2147483647;
-	private final int num = 5;	//specify the number of the closest nodes the program finds for one node;
-								//function 'getNClosestNodes' uses 'num' as parameter.
 	private int numOfLevels;
 
 	ArrayList<Node> graphNodes;
@@ -123,20 +122,12 @@ public class Graph {
 	 * 
 	 * 
 	 * @param mst a Minimum Spanning Tree.
-	 * @return an array which stores two closest nodes which is to the left and to the right 
+	 * @return an array of SixTuple which stores two closest nodes which is to the left and to the right 
 	 * respectively for all the nodes in the tree. 
-	 * 		1st-dimension: index of nodes in the graph 'graphNodes';
-	 * 		2rd-dimension: the first is the index of node on the left, the second is the overlap length with + or -.
-	 * 						the third is the distance with + or -.
-	 * 						the fourth is the index of node on the right, the fifth is the overlap length with + or -.
-	 * 						the sixth is the distance with + or -.
-	 * 						For the first and fourth one, if no node is found, the value is -1;
-	 * 						For the second and fifth one, if no node is found, the value is 0;
-	 * 						For the third and sixth one, if no node is found, the value is INT_MIN or INT_MAX.
 	 */
-	public int[][] get2CloseNodesFromMST(WeightedAdjacencyListGraph mst) {
+	public SixTuple[] get2CloseNodesFromMST(WeightedAdjacencyListGraph mst) {
 		int nOfNodes = mst.getCardV();
-		int[][] alignedNodes = new int[nOfNodes][6];
+		SixTuple[] alignedNodes = new SixTuple[nOfNodes];
 		
 		for (int i=0; i<nOfNodes; i++) {
 			int leftNode = -1;
@@ -179,15 +170,13 @@ public class Graph {
 					}
 				}
 			}
-			alignedNodes[i][0] = leftNode;	//index of node on the left
-			alignedNodes[i][1] = overlapLeft;	//overlap length
-			alignedNodes[i][2] = maxLeft;	//overlap distance
-			
-			alignedNodes[i][3] = rightNode;	//index of node on the right
-			alignedNodes[i][4] = overlapRight;	//overlap length
-			alignedNodes[i][5] = minRight;	//overlap distance
-			
-			//System.out.println("Get 6-tuple for node "+i);
+			//leftNode, index of node on the left
+			//overlapLeft, overlap length
+			//maxLeft, overlap distance
+			//rightNode, index of node on the right
+			//overlapRight, overlap length
+			//minRight, overlap distance
+			alignedNodes[i] = new SixTuple(leftNode, overlapLeft, maxLeft, rightNode, overlapRight, minRight);
 		}
 		return alignedNodes;
 	}
@@ -202,8 +191,8 @@ public class Graph {
 	 * 
 	 * @param mst a Minimum Spanning Tree.
 	 * @param index The index of current node in the tree and graph.
-	 * @param sixTuple The six tuple for this node with the index
-	 * @return six-tuple for the current node which has the input "index". 
+	 * @param sixTuple The SixTuple for this node with the index
+	 * @return SixTuple for the current node which has the input "index". 
 	 *						the first is the index of node on the left, the second is the overlap length with + or -.
 	 * 						the third is the distance with + or -.
 	 * 						the fourth is the index of node on the right, the fifth is the overlap length with + or -.
@@ -212,8 +201,8 @@ public class Graph {
 	 * 						For the second and fifth one, if no node is found, the value is 0;
 	 * 						For the third and sixth one, if no node is found, the value is INT_MIN or INT_MAX.
 	 */
-	public int[] get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, int[] sixTuple) {
-		int[] closeNode = new int[6];
+	public SixTuple get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple) {
+		SixTuple closeNode = new SixTuple();
 		
 		int leftNode = -1;
 		int rightNode = -1;
@@ -221,42 +210,39 @@ public class Graph {
 		//int minRight = INT_MAX;	//minimum right distance
 		//int overlapLeft = 0;
 		//int overlapRight = 0;
-		int maxLeft = sixTuple[2];
-		int minRight = sixTuple[5];
-		int overlapLeft = sixTuple[1];
-		int overlapRight = sixTuple[4];
+		int maxLeft = sixTuple.lDis;
+		int minRight = sixTuple.rDis;
+		int overlapLeft = sixTuple.lOvlLen;
+		int overlapRight = sixTuple.rOvlLen;
 		
-		//put all the parents,grandparents,children,grand-children nodes into an arraylist. Do not 
+		//put all the nodes within three levels from the current node into the stack "allNodes". Do not 
 		// include parents and children because they have been processed.
-		ArrayList<Vertex> allNodes = new ArrayList<Vertex> ();
-		WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(index);
-		while (ite.hasNext()) {
-			Vertex v = (Vertex) ite.next();
-			//allNodes.add(v);
-			int index2 = v.getIndex();
-			WeightedEdgeIterator ite2 = (WeightedEdgeIterator) mst.edgeIterator(index2);
-			while (ite2.hasNext()) {
-				Vertex v2 = (Vertex) ite2.next();
-				if (v2.getIndex() != index) {
-					allNodes.add(v2);
-
-					int index3 = v2.getIndex();
-					WeightedEdgeIterator ite3 = (WeightedEdgeIterator) mst.edgeIterator(index3);
-					while (ite3.hasNext()) {
-						Vertex v3 = (Vertex) ite3.next();
-						if (v3.getIndex() != index2) {
-							allNodes.add(v3);
-						}
+		Stack<Integer> allNodes = new Stack<Integer> ();
+		Stack<Integer> partNodes = new Stack<Integer> ();
+		partNodes.push(Integer.valueOf(index));
+		
+		for (int i=0; i<3; i++) {
+			Stack<Integer> tmpStack = new Stack<Integer> ();
+			
+			while (!partNodes.empty()) {
+				int tmpIndex = partNodes.pop();
+				WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(tmpIndex);
+				while (ite.hasNext()) {
+					Vertex v = (Vertex) ite.next();
+					int tIndex = v.getIndex();
+					tmpStack.push(Integer.valueOf(tIndex));
+					if (i != 0) { //Do not include parents and children because they have been processed.
+						allNodes.push(Integer.valueOf(tIndex));
 					}
 				}
 			}
+			partNodes = tmpStack;
 		}
-		
+
 		//find two closest nodes
 		String s1 = graphNodes.get(index).getNodeStr();
 		while (!allNodes.isEmpty()) {
-			Vertex tmpV = allNodes.remove(0);
-			int tmpIndex = tmpV.getIndex();
+			int tmpIndex = allNodes.pop();
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
 			int[] ovlDis = (d2).getOVLDistance(s1, s2);
 			
@@ -288,13 +274,13 @@ public class Graph {
 				}
 			}
 		}
-		closeNode[0] = leftNode;	//index of node on the left
-		closeNode[1] = overlapLeft;	//overlap length
-		closeNode[2] = maxLeft;	//overlap distance
+		closeNode.leftNode = leftNode;	//index of node on the left
+		closeNode.lOvlLen = overlapLeft;	//overlap length
+		closeNode.lDis = maxLeft;	//overlap distance
 		
-		closeNode[3] = rightNode;	//index of node on the right
-		closeNode[4] = overlapRight;	//overlap length
-		closeNode[5] = minRight;	//overlap distance
+		closeNode.rightNode = rightNode;	//index of node on the right
+		closeNode.rOvlLen = overlapRight;	//overlap length
+		closeNode.rDis = minRight;	//overlap distance
 		
 		//System.out.println("Get 6-tuple for node "+index);
 		return closeNode;
@@ -303,32 +289,42 @@ public class Graph {
 	/**
 	 * Recalculate 6-tuples for an assumed left end in order to make sure it is a real left end.
 	 * Specifically, for the assumed left end,start to calculate from fourth level until meeting one node which 
-	 * makes six-tuple[][0] != -1, or until the level we specified in the property file, then return the six-tuple.
-	 * If we fail to find any node, we consider it a real left end and six-tuple[][0] will be set to be -1.
+	 * makes six-tuple.leftEnd != -1, or until the level we specified in the property file, then return the six-tuple.
+	 * If we fail to find any node, we consider it a real left end and six-tuple.leftEnd will be set to be -1.
 	 * 
 	 * @param mst a Minimum Spanning Tree.
 	 * @param index The index of current node in the tree and graph.
-	 * @param sixTuple The six tuple for this node with the index
-	 * @return an array which stores two closest nodes which is to the left and to the right if it is not left end;
-	 * if it does, six-tuple[][0] = -1.
+	 * @param sixTuple The SixTuple for this node with the index
+	 * @return SixTuple which stores two closest nodes which is to the left and to the right if it is not left end;
+	 * if it does, six-tuple.leftEnd = -1.
 	 */
-	public int[] checkLeftEndFromMST(WeightedAdjacencyListGraph mst, int index, int[] sixTuple) {
+	public SixTuple checkLeftEndFromMST(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple) {
 		if (numOfLevels == 0) { //keep checking until leaves
 			numOfLevels = INT_MAX;
 		}
-		for (int foundLevel=4; foundLevel<=numOfLevels; foundLevel++) {
-			ArrayList<Vertex> allNodes = new ArrayList<Vertex> ();
-			allNodes = getNodesFromMST(mst, index, foundLevel, 0, -1, allNodes);
-
+		
+		Stack<Integer>[] nodes = new Stack[2];
+		nodes[0] = new Stack<Integer>();
+		nodes[1] = new Stack<Integer>();
+		nodes[0].push(Integer.valueOf(index));
+		nodes[1].push(Integer.valueOf(-1));
+		
+		for (int i=0; i<3; i++) { //skip over all the nodes within 3 levels
+			nodes = getNodesFromMST(mst, nodes);
+		}
+		
+		for (int foundLevel=4; foundLevel<=numOfLevels; foundLevel++) { //start from level 4
+			nodes = getNodesFromMST(mst, nodes);
+			
 			System.out.println("GetNodeFromMST for foundLevel=" + foundLevel
 					+ "; index=" + index);
-			System.out.println("\tnumber of nodes = " + allNodes.size());
-
-			if (allNodes.size() == 0) {
+			System.out.println("\tnumber of nodes = " + nodes[0].size());
+			
+			if (nodes[0].size() == 0) {
 				break;
 			} else {
-				int[] closeNode = findAdjacentNode(allNodes, index, sixTuple);
-				if (closeNode[0] != -1) {
+				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple);
+				if (closeNode.leftNode != -1) {
 					System.out.println("findAdjacentNode for index=" + index);
 					return closeNode;
 				}
@@ -340,34 +336,30 @@ public class Graph {
 	}
 	
 	/*
-	 * find the most adajcent node to the current node from allNodes.
-	 * @param allNodes Store all the nodes which will be compared to the current node.
+	 * find the most adjacent node to the current node from allNodes.
+	 * @param allNodes Store indices of all the nodes which will be compared to the current node.
 	 * @param index The index of current node.
 	 * @sixTuple The sixTuple for the current node.
 	 */
-	private int[] findAdjacentNode(ArrayList<Vertex> allNodes, int index, int[] sixTuple) {
-		/*
-		 * store the position of aligned nodes
-		 * 1st-dimension: index of nodes in graph;
-		 * 2rd-dimension: the first is the index of node on the left, 
-		 * 					the second is the overlap length with + or -,
-		 * 					the third is the index of node on the right, 
-		 * 					the forth is the overlap length with + or -.
-		 */
-		int[] closeNode = new int[6];
+	private SixTuple findAdjacentNode(Stack<Integer> nodes, int index, SixTuple sixTuple) {
+		Stack<Integer> allNodes = new Stack<Integer> (); //put all the values of nodes into another stack so that we won't change nodes(it's a pointer) because it may be used by the calling method.
+		for (int i=0; i<nodes.size(); i++) { //get(0) will get the bottom element of the stack
+			allNodes.push(nodes.get(i));
+		}
+		
+		SixTuple closeNode = new SixTuple();
 		
 		int leftNode = -1;
 		int rightNode = -1;
-		int maxLeft = sixTuple[2];
-		int minRight = sixTuple[5];
-		int overlapLeft = sixTuple[1];
-		int overlapRight = sixTuple[4];
+		int maxLeft = sixTuple.lDis;
+		int minRight = sixTuple.rDis;
+		int overlapLeft = sixTuple.lOvlLen;
+		int overlapRight = sixTuple.rOvlLen;
 
 		//find two closest nodes
 		String s1 = graphNodes.get(index).getNodeStr();
-		while (!allNodes.isEmpty()) {
-			Vertex tmpV = allNodes.remove(0);
-			int tmpIndex = tmpV.getIndex();
+		while (!allNodes.empty()) {
+			int tmpIndex = (Integer) allNodes.pop();
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
 			int[] ovlDis = (d2).getOVLDistance(s1, s2);
 			
@@ -398,59 +390,45 @@ public class Graph {
 				}
 			}
 		}
-		closeNode[0] = leftNode;	//index of node on the left
-		closeNode[1] = overlapLeft;	//overlap length
-		closeNode[2] = maxLeft;	//overlap distance
+		closeNode.leftNode = leftNode;	//index of node on the left
+		closeNode.lOvlLen = overlapLeft;	//overlap length
+		closeNode.lDis = maxLeft;	//overlap distance
 		
-		closeNode[3] = rightNode;	//index of node on the right
-		closeNode[4] = overlapRight;	//overlap length
-		closeNode[5] = minRight;	//overlap distance
+		closeNode.rightNode = rightNode;	//index of node on the right
+		closeNode.rOvlLen = overlapRight;	//overlap length
+		closeNode.rDis = minRight;	//overlap distance
 		
 		return closeNode;
 	}
 
 	/**
-	 * Get all the nodes which is at the "foundLevel" from the node "curIndex".
+	 * Get all the children for the input nodes and put them into a stack.
 	 * 
 	 * @param mst a Minimum Spanning Tree.
-	 * @param curIndex The index of current node from which we want to find the nodes.
-	 * @param foundLevel We will find the nodes which is at this level.
-	 * @param curLevel Current level which is used by the recursion to record at which level we are.
-	 * @param parentIndex The parent node of the current node. For the first calling, it is -1; it has value during recursion.
-	 * @param nodes The arraylist which stores all the found nodes.
-	 * @return an array which stores all the found nodes.
+	 * @param nodes The stack array, nodes[0], the indexes of all the nodes for which we will find their children;
+	 * 		nodes[1], the indexes of the parent node of every element in nodes[0].
+	 * @return a stack array which stores all the found nodes' indexes. ret[0], the indexes of all the found nodes
+	 * 		(that is, the children of input nodes); ret[1], the indexes of the parent node of every element in nodes[0].
 	 */
-	private ArrayList<Vertex> getNodesFromMST(WeightedAdjacencyListGraph mst, int curIndex, int foundLevel, int curLevel, int parentIndex, ArrayList<Vertex> nodes) {
-		
-		ArrayList<Vertex> allNodes = nodes;
-		WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(curIndex);
-		
-		if (foundLevel < curLevel) {
-			System.out.println("getNodesFromMST has an error: foundLevel is less than curLevel!");
-			return null;
-		}
-		
-		if (foundLevel == curLevel+1){
+	private Stack<Integer>[] getNodesFromMST(WeightedAdjacencyListGraph mst, Stack<Integer>[] nodes) {
+		Stack<Integer>[] ret = new Stack[2];
+		ret[0] = new Stack<Integer>();
+		ret[1] = new Stack<Integer>();
+		while (!(nodes[0].empty())) {
+			int curIndex = (Integer) nodes[0].pop();
+			int parentIndex = (Integer) nodes[1].pop();
+			
+			WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(curIndex);
 			while (ite.hasNext()) {
 				Vertex v = (Vertex) ite.next();
 				int index2 = v.getIndex();
-				if (parentIndex == -1) {
-					allNodes.add(v);
-				} else if (parentIndex != index2) {
-					allNodes.add(v);
+				if (parentIndex != index2) {
+					ret[0].push(Integer.valueOf(index2));
+					ret[1].push(Integer.valueOf(curIndex));
 				}
 			}
-		} else { //foundLevel - curLevel >= 1
-			while (ite.hasNext()) {
-				Vertex v = (Vertex) ite.next();
-				int index2 = v.getIndex();
-				if ((parentIndex == -1) || (parentIndex != index2)){
-					getNodesFromMST(mst, index2, foundLevel, curLevel+1, curIndex, nodes);
-				} 
-			}
 		}
-		
-		return allNodes;
+		return ret;
 	}
 
 	

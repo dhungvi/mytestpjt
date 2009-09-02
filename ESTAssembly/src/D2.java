@@ -7,6 +7,10 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Stack;
+
+import com.mhhe.clrs2e.Vertex;
+import com.mhhe.clrs2e.WeightedEdgeIterator;
 
 import neobio.alignment.BasicScoringScheme;
 import neobio.alignment.IncompatibleScoringSchemeException;
@@ -419,6 +423,34 @@ public class D2 {
 	}
 
 	/*
+	 * Use Needleman-Wunsch algorithm to get local alignment.
+	 * @param s1, s2
+	 * @return string[], [0] and [1] are the two aligned sequences, [2] is the pairwise alignment.
+	 */
+	public String[] getGlobalAlignment(String s1, String s2) {
+		int match = 1;
+		int mismatch = -1;
+		int gap = -2;
+		NeedlemanWunsch algorithm = new NeedlemanWunsch();
+		BasicScoringScheme scoring = new BasicScoringScheme(match, mismatch, gap);
+		algorithm.setScoringScheme(scoring);
+		algorithm.loadSequences(s1, s2);
+		String[] strs = new String[3];
+		
+		try {
+			strs[0] = algorithm.getPairwiseAlignment().getGappedSequence1();
+			strs[1] = algorithm.getPairwiseAlignment().getGappedSequence2();
+			strs[2] = algorithm.getPairwiseAlignment().toString();
+			//System.out.println(algorithm.getPairwiseAlignment());
+		} catch (IncompatibleScoringSchemeException e) {
+			// TODO Auto-generated catch block
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+		return strs;
+	}
+
+	/*
 	 * Use Smith-Waterman algorithm to calculate similarity score of two string.
 	 * @param s1, s2
 	 * @return int similarity score(>=0), if the value is less than 0, it's set to be zero.
@@ -452,7 +484,7 @@ public class D2 {
 	}
 
 	/*
-	 * Use Smith-Waterman algorithm to calculate similarity score of two string.
+	 * Use Smith-Waterman algorithm to get local alignment.
 	 * @param s1, s2
 	 * @return string[], [0] and [1] are the two aligned sequences, [2] is the pairwise alignment.
 	 */
@@ -470,6 +502,7 @@ public class D2 {
 			strs[0] = algorithm.getPairwiseAlignment().getGappedSequence1();
 			strs[1] = algorithm.getPairwiseAlignment().getGappedSequence2();
 			strs[2] = algorithm.getPairwiseAlignment().toString();
+			System.out.println(algorithm.getPairwiseAlignment());
 		} catch (IncompatibleScoringSchemeException e) {
 			// TODO Auto-generated catch block
 			System.err.println(e.getMessage());
@@ -558,19 +591,38 @@ public class D2 {
 		}
 		
 		D2 d2 = new D2(props);
-		String s1 = "AGGACGTTAATACTGGAATCGTTTCAGAGAGGAgTGCGCTGCAAACATGCAGAACCACATGACTTCATTGCTGGTGGTTCTGCTGCTCCTGTGCGGCTGCACTGCGAACCAAAGCCAAGACAATGCGCCCATCCCTCTGTTTACCCAGTCTGTTTACAATGCTACCATTTATGAGAACTCTGCTGCTAAGACtTATGTGGAAAGTCCTGTCAAgATGGGAATCTACATCACAGATCCGACCTGGGAAATACGGTACAAAATTGTGTCAGGAGACAACGAGAACCTGTTCAAAGCTGAGGACTATCATTTGGGAGACTTTAGTTTTTTGAgA";
-		String s2 = "GAGCGCGGCTGAGAGTGTCGGTACCATGCAGAGATTGGGAACTTACAAaCTTCATGAAAAGCCACCTAACAAAGGACGTTAATACTGGAATCGTTTCAGAGAGGAGTGCGCTGCAAACATGCAGAACCACATGACTTCATTGCTGGTGGTTCTGCTGCTCCTGcGCGGCTGCACTGCGAACCAAAGCCAAGACAATGCGCCCATCCCTCTGTTTACCCAGTCTGTTTACAATGCTACaATTTaTtAGAACTCTGCTGCTAAGACCTATGTGGAAAGTCCTGTCAAAATGGGAATCTACATCACAGATCCGACCTGGGAAATACGGTACAAAATTGTGTCAGGAGACAACGAGAACCTGTTCAAAGCTGAGGACTATCATTTGGGAGACTTTAGTTTTTTGAGAATAAGGACCAAAGGAGGTAGCAGTGCAATTCTTAACCGGGAGGTCAGAGACCACTATATTCTCcCAGTCAAAGCCATGGAAAAGAATTCAAATGCTGAGGCTCGAACACGAGTCAGAATTCAGGTACTGGATACAAATGACCTTCGACCACTGTcCTCCCCgAa";
-		System.out.println(d2.getSimlarityScore(s1,s2));
+		String s1 = "AGGACGTTAATACTGGAATCGTTTCAGAGAGGAgTGCGCTGCAAACATGCAGAACCA";
+		String s2 = "AGGACGTTAATACTGGAAGCGTTTCAGAGAGGAgTGCGCTGCAAACATGCAGACCA";
+		//System.out.println(d2.getSimlarityScore(s1,s2));
 		System.out.println(d2.getLocalSimlarityScore(s1,s2));
-		System.out.println(d2.checkInclusion(s1, s1));
+		//System.out.println(d2.checkInclusion(s1, s1));
 		//int offset = s1.indexOf(s2);
 		//System.out.println("offset=" + offset);
-		double dis = d2.getLocalSimlarityScore(s1,s2);
-		if ((dis/s2.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
-			System.out.println("dis=" + dis + "; len=" + s2.length());
-		}
+		//double dis = d2.getLocalSimlarityScore(s1,s2);
+		//if ((dis/s2.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
+		//	System.out.println("dis=" + dis + "; len=" + s2.length());
+		//}
 		
-	}
+		
+/*		Stack<Integer> ret[] = new Stack[2];
+		ret[0] = new Stack<Integer>();
+		ret[1] = new Stack<Integer>();
+		int i1 = 5;
+		ret[0].push(Integer.valueOf(i1));
+		i1 = 6;
+		ret[0].push(Integer.valueOf(i1));
+		
+		Stack<Integer> ret1[] = new Stack[2];
+		ret1[0] = new Stack<Integer>();
+		ret1[1] = new Stack<Integer>();
+		int i2 = 8;
+		ret1[0].add(Integer.valueOf(i2));
+		i2 = 9;
+		ret1[0].add(Integer.valueOf(i2));
+		
+		ret = ret1;
+		System.out.println(ret[0].get(1));
+*/	}
 	
 	//only used for test by main
 	protected static Properties getProperties(String fName) throws IOException {
