@@ -112,7 +112,7 @@ public class SmithWaterman extends PairwiseAlignmentAlgorithm
 	protected int max_col;
 
 	/*
-	 * added by yuan
+	 * added by yuan zhang
 	 * constructor: load two strings
 	 */
 	public void loadSequences(String s1, String s2) {
