@@ -20,6 +20,7 @@ public class ESTAssembly {
 	String inFileName;
 	String resultFileName;
 	String consensusFileName;
+	String singletonFileName;
 	ArrayList<String> ests;	//store all the ests. It is generated in 'readEstFile' function.
 	Graph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
 	WeightedAdjacencyListGraph mstForG;	//minimum spanning tree generated from 'g'
@@ -39,16 +40,20 @@ public class ESTAssembly {
 	SixTuple[] alignArray;
 	int[] sPos;	//starting positions of all the nodes, initialized in "processAlignArray" function.
 				//the index in the array is the index of the node, the value is its starting position. 
+	int[] sPosDebug;	//starting positions of all the nodes, initialized in "processAlignArray" function.
+	//it's used for debugging. All the left ends will be assigned to their actual value in order to calculate inversions later. 
 	
 	public ESTAssembly(Properties props) {
 		oriFileName = props.getProperty("SourceFile");
 		mstFile = props.getProperty("MSTFile");
-		inFileName = props.getProperty("OutFile");
-		resultFileName = props.getProperty("ResultFile");
+		inFileName = props.getProperty("EstFile");
+		//resultFileName = props.getProperty("ResultFile");
 		consensusFileName = props.getProperty("ConsensusFile");
+		singletonFileName = props.getProperty("SingletonFile");
 		ests = new ArrayList<String> ();
 		alignArray = null;
 		sPos = null;
+		sPosDebug = null;
 		g = new Graph(props);
 		leftMostNodes = new ArrayList<Integer> ();
 	}
@@ -88,9 +93,10 @@ public class ESTAssembly {
 				str = str.trim();
 				// first line is comment line which begins from '>'
 				if (str.charAt(0) == '>') {	//comment line begins from '>'
-					//String[] paras = str.split("_");
-					//ests.add(paras[1]);
-					ests.add("0");
+					String[] paras = str.split("_");
+					ests.add(paras[1]);
+					//ests.add("0"); //starting position
+					ests.add(str); //comment
 					
 					//get est in the next lines
 					str = in.readLine();
@@ -122,8 +128,8 @@ public class ESTAssembly {
 		int i=0;
 		while (i<ests.size()) {
 			//the sequence is upper-case
-			g.addNode(new Node(ests.get(i), ests.get(i+1).toUpperCase()));
-			i = i+2;
+			g.addNode(new Node(ests.get(i), ests.get(i+1), ests.get(i+2).toUpperCase()));
+			i = i+3;
 		}
 	}
 	
@@ -323,10 +329,10 @@ public class ESTAssembly {
 	/* 
 	 * Print the assembled starting position and the actual position for all the ests
 	 */
-	private void printSPos() {
-		System.out.println("Calculated s_i	Actual s_i");
-		for (int i=0; i<sPos.length; i++) {
-			System.out.println(sPos[i] + "	" + g.getNameOfNode(i));
+	public void printSPos() {
+		System.out.println("Calculated s_i	Actual s_i	sPos");
+		for (int i=0; i<sPosDebug.length; i++) {
+			System.out.println(sPosDebug[i] + "	" + g.getNameOfNode(i) + "	" + sPos[i]);
 		}
 	}
 
@@ -356,11 +362,11 @@ public class ESTAssembly {
 	/* 
 	 * Calculate inversions for all the calculated positions of ESTs
 	 */
-	private void calcInversion() {
+	public void calcInversion() {
 			//Firstly, sort the array sPos
-			StartPos2[] resultArray = new StartPos2[sPos.length]; //store the starting positions of ests
-			for (int i=0; i<sPos.length; i++) {
-				resultArray[i] = new StartPos2(sPos[i], g.getNameOfNode(i));
+			StartPos2[] resultArray = new StartPos2[sPosDebug.length]; //store the starting positions of ests
+			for (int i=0; i<sPosDebug.length; i++) {
+				resultArray[i] = new StartPos2(sPosDebug[i], g.getNameOfNode(i));
 			}
 			MergeSort merge = new MergeSort();
 			merge.sort(resultArray);
@@ -404,9 +410,9 @@ public class ESTAssembly {
 	 * the overlap distance instead of overlap length. 
 	 * Then reconstruct the sequence from the set of ESTs.
 	 * 
-	 * @return The assembled sequences.
+	 * @return two arraylist: The assembled sequences, the singletons.
 	 */
-	public String reconstruct() {
+	public ArrayList<String>[] reconstruct() {
 		/*
 		 * Calculate the length of dGraph.
 		 */
@@ -460,11 +466,14 @@ public class ESTAssembly {
 		 *     Return all the generated sequences which are separated by newline character.
 		 */
 		WeightedAdjacencyListGraph primMST = null;
-		String retStr = "";
+		String printStr = "";
 		ArrayList<String> allConsensus= new ArrayList<String> ();	//store all the generated sequences
+		ArrayList<String> allSingletons= new ArrayList<String> ();	//store all the singletons
 		ArrayList<String> lastEsts = new ArrayList<String> ();
 		ArrayList<String> firstEsts = new ArrayList<String> ();
-		for (int i=0; i<leftMostNodes.size(); i++) {
+		
+		sPosDebug = new int[alignArray.length];	
+		for (int i=0; i<leftMostNodes.size(); i++) { //start for
 			sPos = new int[alignArray.length];	//store starting positions of all the nodes
 
 			int leftEnd = leftMostNodes.get(i).intValue();
@@ -488,13 +497,19 @@ public class ESTAssembly {
 
 			//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
 			sPos[leftEnd] = sPos[0];
+				sPosDebug[leftEnd] = sPosDebug[0];
 			sPos[0] = 0; //starting position of the left end is assigned to be 0.
+				sPosDebug[0] = Integer.parseInt(g.getNameOfNode(leftEnd));
 			//get starting positions for the nodes in primMST
 			getStartPos(0, leftEnd, primMST, dGraph);
+				getStartPosDebug(0, leftEnd, primMST, dGraph);
 			//exchange sPos[0] and sPos[leftEnd] to recover index 0 in sPos
 			int tmp = sPos[0];
+				int tmp1 = sPosDebug[0];
 			sPos[0] = sPos[leftEnd];
+				sPosDebug[0] = sPosDebug[leftEnd];
 			sPos[leftEnd] = tmp;
+				sPosDebug[leftEnd] = tmp1;
 
 			
 			//reconstruct this sequence 
@@ -505,12 +520,18 @@ public class ESTAssembly {
 					tmpArray.add(new StartPos(sPos[j], g.getSeqOfNode(j)));
 				}
 			}
+			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.\n");
+			if (tmpArray.size() == 1) { //singleton
+				allSingletons.add(g.getCommentOfNode(leftEnd) + "\n" + g.getSeqOfNode(leftEnd));
+				continue;
+			} 
+			
 			lastEsts.add(tmpArray.get(tmpArray.size()-1).seq);
 			firstEsts.add(g.getSeqOfNode(leftEnd));
-			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.\n");
+
 			String tStr = reconstructSeq(tmpArray, 0);
 			allConsensus.add(tStr);
-			retStr = retStr + tStr + "\n";
+			printStr = printStr + tStr + "\n";
 
 			
 			//re-exchange index of node 0 and the left-end node to recover dGraph to its original values. 
@@ -526,16 +547,27 @@ public class ESTAssembly {
 					dGraph[t][1] = 0;
 				}
 			}
-		}
+		} //end for
 		
 		//if there are more than one consensus, process them.
 		int tmpSize = allConsensus.size();
 		if (tmpSize > 1) { 
-			retStr = retStr + "The consensus from above " + tmpSize + " sequences:\n\n";
-			String s = processMoreConsensus(allConsensus, firstEsts, lastEsts);
-			retStr = retStr + s;
+			printStr = printStr + "The consensus from above " + tmpSize + " sequences:\n";
+			ArrayList<String> s = processMoreConsensus(allConsensus, firstEsts, lastEsts);
+			for (int p=0; p<s.size(); p++) {
+				printStr = printStr + s.get(p) + "\n";
+			}
+			allConsensus = s;
 		}
-		return retStr;
+		
+		//print debug information about the generated consensus.
+		System.out.println("*********************consensus:********************");
+		System.out.println(printStr);
+		
+		ArrayList<String>[] rets = new ArrayList[2];
+		rets[0] = allConsensus;
+		rets[1] = allSingletons;
+		return rets;
 	}
 	
 	 /* 
@@ -551,8 +583,9 @@ public class ESTAssembly {
 	 * 			lastEsts an arraylist which includes all last est sequence corresponding to all the consensus.
 	 * @return the combined consensus.
 	 */
-	 private String processMoreConsensus(ArrayList<String> s, ArrayList<String> firstEsts, ArrayList<String> lastEsts) {
-		String retStr = "";
+	 private ArrayList<String> processMoreConsensus(ArrayList<String> s, ArrayList<String> firstEsts, ArrayList<String> lastEsts) {
+		//String retStr = "";
+		ArrayList<String> allOutputContigs= new ArrayList<String> ();	//store all the generated sequences
 		
 		int sizeOfs = s.size();
 		Consensus[] resultArray = new Consensus[sizeOfs]; //store the starting positions of ests
@@ -580,7 +613,8 @@ public class ESTAssembly {
 					excludeStrs.add(allConsensus.get(i));
 				}
 			}
-			retStr = retStr  + "\n" + processMoreConsensusWithInclusion(includeStrs);
+			//retStr = retStr  + "\n" + processMoreConsensusWithInclusion(includeStrs);
+			allOutputContigs.add(processMoreConsensusWithInclusion(includeStrs));
 			if (excludeStrs.size() == 0) {
 				break;
 			} else {
@@ -589,7 +623,7 @@ public class ESTAssembly {
 		}
 
 
-		return retStr;
+		return allOutputContigs;
 	 }
 	 
 	 static class Consensus implements Comparable<Consensus> {
@@ -982,13 +1016,13 @@ public class ESTAssembly {
 		int start = 0;
 		int end = lenOfArray-1;
 		for (int i=0; i<=end; i++) {
-			if (tmpArraylists[i].size() >= 3) {
+			if (tmpArraylists[i].size() >= 1) {
 				start = i;
 				break;
 			}
 		}
 		for (int i=end; i>=start; i--) {
-			if (tmpArraylists[i].size() >= 5) {
+			if (tmpArraylists[i].size() >= 1) {
 				end = i;
 				break;
 			}
@@ -1116,38 +1150,52 @@ public class ESTAssembly {
 	 */
 	public void printConsensus() {
 		try{ 
-			File outFile = new File(consensusFileName);
-			boolean bExists = outFile.exists();
+			/*
+			 * print consensus sequences
+			 */
+			File outFile1 = new File(consensusFileName);
+			boolean bExists = outFile1.exists();
 			if (bExists) {
-				outFile.delete();
+				outFile1.delete();
 			}
-			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
-
-			/*
-			 * print the original sequence
-			 */
-			File oriFile = (new File(oriFileName));
-			if (!oriFile.exists()) {
-				System.out.println("SourceFile does not exist!");
-				//return;
-			} else {
-				BufferedReader in = new BufferedReader(new FileReader(oriFile));
-				String comment = in.readLine();
-				String oriStr = in.readLine();
-				in.close();	
-				out.write(oriStr);
-				out.write("\n");
+			BufferedWriter out1 = new BufferedWriter(new FileWriter(outFile1, true));
+			ArrayList<String>[] results = this.reconstruct();
+			ArrayList<String> consensus = results[0];
+			int index = 1;
+			for (int i=0; i<consensus.size(); i++) {
+				String str = consensus.get(i);
+				if (str.indexOf("\n") != -1) { //there is "\n" in the sequence
+					String[] tStrs = str.split("\n");
+					for (int j=0; j<tStrs.length; j++) {
+						out1.write(">contig " + (index++) + "\n");
+						out1.write(tStrs[j]);
+						out1.write("\n");
+					}
+				} else {
+					out1.write(">contig " + (index++) + "\n");
+					out1.write(consensus.get(i));
+					out1.write("\n");
+				}
 			}
-
-			/*
-			 * print the consensus
-			 */
-			String consensus = this.reconstruct();
-			out.write(consensus);
-			out.write("\n");
+			out1.flush();
+			out1.close();
 			
-			out.flush();
-			out.close();
+			/*
+			 * print the singletons
+			 */
+			File outFile2 = new File(singletonFileName);
+			bExists = outFile2.exists();
+			if (bExists) {
+				outFile2.delete();
+			}
+			BufferedWriter out2 = new BufferedWriter(new FileWriter(outFile2, true));
+			ArrayList<String> singletons = results[1];
+			for (int i=0; i<singletons.size(); i++) {
+				out2.write(singletons.get(i));
+				out2.write("\n");
+			}
+			out2.flush();
+			out2.close();
 		}catch(IOException e){ 
 			System.out.println(e.toString());
 		} 
@@ -1208,6 +1256,36 @@ public class ESTAssembly {
 		}
 	}
 
+	/* 
+	 * Used for debugging. 
+	 */
+	
+	protected void getStartPosDebug(int parentNode, int leftEnd, WeightedAdjacencyListGraph tree, int[][] d) {
+		WeightedEdgeIterator ite = (WeightedEdgeIterator) tree.edgeIterator(parentNode);
+		while (ite.hasNext()) {
+			Vertex v = (Vertex) ite.next();
+			
+			int index = v.getIndex();
+			
+			int overlapLen = 0;
+			for (int i=0; i<d.length; i++) {
+					if ((d[i][0] == parentNode) && (d[i][1] == index)) {
+						overlapLen = d[i][3];
+						break;
+					}
+			}
+			
+			if (parentNode == 0) { // it's left end node actually
+				sPosDebug[index] = sPosDebug[parentNode] + g.getLenOfNode(leftEnd) - overlapLen;
+			} else if (parentNode == leftEnd) { // it's node 0 actually
+				sPosDebug[index] = sPosDebug[parentNode] + g.getLenOfNode(0) - overlapLen;
+			} else {
+				sPosDebug[index] = sPosDebug[parentNode] + g.getLenOfNode(parentNode) - overlapLen;
+			}
+			getStartPosDebug(index, leftEnd, tree, d);
+		}
+	}
+
 	protected static Properties getProperties(String fName) throws IOException {
 		Properties props = new Properties();
 		File f = new File(fName);
@@ -1246,14 +1324,14 @@ public class ESTAssembly {
 		System.out.println("End to process 6-tuples.");
 		System.out.println("The time used to process 6-tuples is " + (new GregorianCalendar().getTimeInMillis()-time1));
 		
-		//assemble.printSPos();
-		//assemble.printConsensus();
-		//assemble.calcInversion();
-		
 		time1 = new GregorianCalendar().getTimeInMillis();
 		System.out.println("Start to reconstruct.");
 		assemble.printConsensus();
 		System.out.println("End to reconstruct.");
 		System.out.println("The time used to reconstruct is " + (new GregorianCalendar().getTimeInMillis()-time1));
+
+		assemble.printSPos();
+		assemble.calcInversion();
+		
 	}
 }

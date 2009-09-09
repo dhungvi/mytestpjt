@@ -1,5 +1,7 @@
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -423,7 +425,7 @@ public class D2 {
 	}
 
 	/*
-	 * Use Needleman-Wunsch algorithm to get local alignment.
+	 * Use Needleman-Wunsch algorithm to get global alignment.
 	 * @param s1, s2
 	 * @return string[], [0] and [1] are the two aligned sequences, [2] is the pairwise alignment.
 	 */
@@ -441,7 +443,7 @@ public class D2 {
 			strs[0] = algorithm.getPairwiseAlignment().getGappedSequence1();
 			strs[1] = algorithm.getPairwiseAlignment().getGappedSequence2();
 			strs[2] = algorithm.getPairwiseAlignment().toString();
-			//System.out.println(algorithm.getPairwiseAlignment());
+			System.out.println(algorithm.getPairwiseAlignment());
 		} catch (IncompatibleScoringSchemeException e) {
 			// TODO Auto-generated catch block
 			System.err.println(e.getMessage());
@@ -484,6 +486,69 @@ public class D2 {
 	}
 
 	/*
+	 * Use Smith-Waterman algorithm to calculate A score of two string.
+	 * @param s1, s2; s1-provided sequence, s2-assembled sequence
+	 * @return int A-score.
+	 * A-score = (2*sequence length) - (15*no.of insertions) -
+     *     (15*no.of deletions) - (5*no. of substitutions); 
+     *     here we set sequence length=length of s2
+	 */
+/*	public int getAScore(String s1, String s2) {
+		int match = 1;
+		int mismatch = -1;
+		int gap = -1;
+		SmithWaterman algorithm = new SmithWaterman();
+		BasicScoringScheme scoring = new BasicScoringScheme(match, mismatch, gap);
+		algorithm.setScoringScheme(scoring);
+		algorithm.loadSequences(s1, s2);
+		
+		int score = INT_MAX;
+		try {
+			//System.out.println(algorithm.getPairwiseAlignment());
+
+			//score1=len of same - no. of gap - no. of mismatch
+			int score1 = algorithm.getScore(); 
+			
+			match = 3;
+			mismatch = -2;
+			gap = -2;
+			scoring = new BasicScoringScheme(match, mismatch, gap);
+			algorithm.setScoringScheme(scoring);
+			//System.out.println(algorithm.getPairwiseAlignment());
+
+			//score2=(3*len of same) - (2*no. of gap) - (2*no. of mismatch), and this two scoring should 
+			// come from the same alignment sequence because in every case the penalty of gap and mismatch
+			// are same.
+			String seq1 = algorithm.getPairwiseAlignment().getGappedSequence1();
+			String seq2 = algorithm.getPairwiseAlignment().getGappedSequence2();
+			int score2 = algorithm.getScore();
+			
+			int lenOfSame = score2 - 2*score1;
+			int nGap = 0;
+			if (seq1.indexOf("-") != -1) {
+				nGap = seq1.split("-").length - 1;
+			}
+			if (seq2.indexOf("-") != -1) {
+				nGap = (seq2.split("-").length - 1) + nGap;
+			}
+			
+			int nMismatch = lenOfSame - nGap - score1;
+			
+			//if seq2 is substring of s2, we will consider all the other characters in s2 as mismatch.
+			String tSeq2 = seq2.replaceAll("-", "");
+			nMismatch = nMismatch + (s2.length() - tSeq2.length());
+			
+			score = 2*s2.length() - 15*nGap - 5*nMismatch;
+		} catch (IncompatibleScoringSchemeException e) {
+			// TODO Auto-generated catch block
+			System.err.println(e.getMessage());
+			System.exit(1);
+		}
+
+		return score;
+	}
+*/
+	/*
 	 * Use Smith-Waterman algorithm to get local alignment.
 	 * @param s1, s2
 	 * @return string[], [0] and [1] are the two aligned sequences, [2] is the pairwise alignment.
@@ -502,7 +567,7 @@ public class D2 {
 			strs[0] = algorithm.getPairwiseAlignment().getGappedSequence1();
 			strs[1] = algorithm.getPairwiseAlignment().getGappedSequence2();
 			strs[2] = algorithm.getPairwiseAlignment().toString();
-			System.out.println(algorithm.getPairwiseAlignment());
+			//System.out.println(algorithm.getPairwiseAlignment());
 		} catch (IncompatibleScoringSchemeException e) {
 			// TODO Auto-generated catch block
 			System.err.println(e.getMessage());
@@ -591,10 +656,12 @@ public class D2 {
 		}
 		
 		D2 d2 = new D2(props);
-		String s1 = "AGGACGTTAATACTGGAATCGTTTCAGAGAGGAgTGCGCTGCAAACATGCAGAACCA";
-		String s2 = "AGGACGTTAATACTGGAAGCGTTTCAGAGAGGAgTGCGCTGCAAACATGCAGACCA";
+		String s1 = "CGGGCCTTCGTTTTACGAAAACAGGTGCGCGAAGCCTGCAAATTTGACGGGGATGGGTATGCTGTTCAGTGCAGCAGCAGAGGCGGAGCATTGGCAAGGAGCGGCTGCTGGCGCGAAGCAGCAACAGGAGCAGTCAATAAGCATGGCTATGCAGGAATCTAATACGCTTTGAGGTGCAACAACAGCCCTTCAGCGCCGGAGATGCCGCTATGGGGAGCGGAGACGCCCAGCAGCCTGGGGCCGTCATATCTTGTGCCCCCATGGCCCGCTATGGAGCTGGACTACCTTACAGATTACAGCAGCATGCTCTGGTGCTGCCGCGGACG";
+		String s2 = "CGGGCCTTCGTTTTACGAAAACAGGTGCGCGAAGCCTGCAAATTTGACGGGGATGGGTATGCTGTTCAGTGCAGCAGCAGAGGCGGAGCATTGGCAAGGAGCGGCTGCTGGCGCGAAGCAGCAACAGGAGCAGTCAATAAGCATGGCTATGCAGGAATCTAATACGCTTTGAGGTGCAACAACAGCCCTTCAGCGCCGGAGATGCCGCTATGGGGAGCGGAGACGCCCAGCAGCCTGGGGCCGTCATATCTTGTGCCCCCATGGCCCGCTATGGAGCTGGACTACCTTACAGATTACAGCAGCATGCTCTGGTGCTGCCGCGGACG";
 		//System.out.println(d2.getSimlarityScore(s1,s2));
-		System.out.println(d2.getLocalSimlarityScore(s1,s2));
+		//System.out.println(d2.getLocalAlignment(s1,s2));
+		//System.out.println(d2.getGlobalAlignment(s1, s2));
+		//System.out.println(d2.getAScore(s1, s2));
 		//System.out.println(d2.checkInclusion(s1, s1));
 		//int offset = s1.indexOf(s2);
 		//System.out.println("offset=" + offset);
@@ -602,27 +669,9 @@ public class D2 {
 		//if ((dis/s2.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
 		//	System.out.println("dis=" + dis + "; len=" + s2.length());
 		//}
-		
-		
-/*		Stack<Integer> ret[] = new Stack[2];
-		ret[0] = new Stack<Integer>();
-		ret[1] = new Stack<Integer>();
-		int i1 = 5;
-		ret[0].push(Integer.valueOf(i1));
-		i1 = 6;
-		ret[0].push(Integer.valueOf(i1));
-		
-		Stack<Integer> ret1[] = new Stack[2];
-		ret1[0] = new Stack<Integer>();
-		ret1[1] = new Stack<Integer>();
-		int i2 = 8;
-		ret1[0].add(Integer.valueOf(i2));
-		i2 = 9;
-		ret1[0].add(Integer.valueOf(i2));
-		
-		ret = ret1;
-		System.out.println(ret[0].get(1));
-*/	}
+		//d2.getOVLDistance(s1, s2);
+		System.out.println(d2.checkInclusion(s1, s2));
+	}
 	
 	//only used for test by main
 	protected static Properties getProperties(String fName) throws IOException {

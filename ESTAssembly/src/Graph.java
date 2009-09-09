@@ -58,6 +58,13 @@ public class Graph {
 		return graphNodes.get(i).getSeq();
 	}
 	
+	/*
+	 * get comment of the node with index i
+	 */
+	public String getCommentOfNode(int i) {
+		return graphNodes.get(i).getComment();
+	}
+	
 
 	/*
 	 * read a minimum spanning tree from the input MST file
@@ -319,7 +326,11 @@ public class Graph {
 			System.out.println("GetNodeFromMST for foundLevel=" + foundLevel
 					+ "; index=" + index);
 			System.out.println("\tnumber of nodes = " + nodes[0].size());
-			
+/*			for (int t=0; t<nodes[0].size(); t++) {
+				System.out.print(nodes[0].get(t)+"  ");
+			}
+			System.out.println();
+*/			
 			if (nodes[0].size() == 0) {
 				break;
 			} else {
