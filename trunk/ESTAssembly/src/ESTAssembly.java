@@ -529,7 +529,7 @@ public class ESTAssembly {
 			lastEsts.add(tmpArray.get(tmpArray.size()-1).seq);
 			firstEsts.add(g.getSeqOfNode(leftEnd));
 
-			String tStr = reconstructSeq(tmpArray, 0);
+			String tStr = reconstructSeq(tmpArray);
 			allConsensus.add(tStr);
 			printStr = printStr + tStr + "\n";
 
@@ -736,10 +736,19 @@ public class ESTAssembly {
 		return retStr;
 	}
 	
+	private String getCurConsensus(ArrayList<SingleBase> bases) {
+		int len = bases.size();
+		StringBuffer tStr = new StringBuffer();
+		for (int i=0; i<len; i++) {
+			tStr.append(bases.get(i).getCurBase());
+		}
+		return tStr.toString();
+	}
+	
 	/*
 	 * reconstruct a sequence which starts from a left end.
 	 */
-	private String reconstructSeq(ArrayList<StartPos> a, int breakPoint) {
+	private String reconstructSeq(ArrayList<StartPos> a) {
 		int sizeOfa = a.size();
 		if (sizeOfa == 0) {
 			return null;
@@ -753,350 +762,60 @@ public class ESTAssembly {
 		MergeSort merge = new MergeSort();
 		merge.sort(resultArray);
 
-
-		//local align every two adjacent nodes, e.g, node 1 and 2, node 2 and 3..., node i-1 and node i.
-		//put them into two arraylists, the local alignment sequences of node i and i+1 are put into arraylist 1 and 2 respectively.
-		ArrayList<String> arrList1 = new ArrayList<String> ();
-		ArrayList<String> arrList2 = new ArrayList<String> ();
-		for (int i=0; i<resultArray.length-1; i++) {
-			String[] strs = g.d2.getLocalAlignment(resultArray[i].seq, resultArray[i+1].seq);
-			arrList1.add(strs[0]);
-			arrList2.add(strs[1]);
-		}
-		
-		int size = arrList1.size();
-		//store the starting positions of all the elements in arrList1
-		int[] sposArr1 = new int[size];
-		//store the starting positions of all the elements in arrList2
-		int[] sposArr2 = new int[size];
-		//calculate the starting positions and put them into sposArr1 and sposArr2.
-		sposArr1[0] = 0;
-		sposArr2[0] = 0;
-		int bPoint = size-1; //record the point when the the program breaks the loop. default is when it goes through all the loops.
-		int flag = 0; //identify if the we need execute reconstruction again for the program breaks the loop.
-		ArrayList<StartPos> b = new ArrayList<StartPos> (); //the input parameter for this function if flag=1.
-		for (int i=breakPoint; i<size-1; i++) {
-			String s1 = arrList2.get(i);
-			String s2 = arrList1.get(i+1);
-			String s1Tmp = s1.replace("-", "");
-			String s2Tmp = s2.replace("-", "");
+		ArrayList<SingleBase> bases = new ArrayList<SingleBase> ();
+		String tConsensus = resultArray[0].seq;
+		String curSeq = "";
+		for (int i=1; i<resultArray.length-1; i++) {
+			curSeq = resultArray[i].seq;
+			String[] strs = g.d2.getLocalAlignment(tConsensus, curSeq);
+			tConsensus = tConsensus.replace(strs[0].replace("-", ""), strs[0]);
+			int offset = tConsensus.indexOf(strs[0]);
 			
-			// if s1 and s2 do not overlap, record i to bPoint, and break this loop.
-			// get the assembled sequence from all the i<bPoint, add "\n" to the end.
-			// and then restart the reconstruction from i+1.
-			String tmpStr = resultArray[i+1].seq;
-			int tmpPos1 = tmpStr.indexOf(s1Tmp);
-			int tmpPos2 = tmpStr.indexOf(s2Tmp);
-			if (tmpPos1+s1.length() <= tmpPos2+30) {
-				bPoint = i;
-				flag = 1;
-				//put the left data to variable b as the input parameter
-				for (int j=i+1; j<sizeOfa; j++) {
-					b.add(resultArray[j]);
-				}
-				break;
-			}
-			// in general case, s1 should be on the left of s2.
-			// but rarely, s1 may be on the right of s2. If it is the case, we would exchange s1 and s2, 
-			//     calculate the offset, and then give the offset a negative value.
-			int posDirection = 1;
-			tmpPos1 = tmpStr.indexOf(s1Tmp); //tmpStr may have been changed, so calculate it again.
-			tmpPos2 = tmpStr.indexOf(s2Tmp);
-			if (tmpPos1 > tmpPos2) {
-				posDirection = -1; //set direction to be -1.
-				String tmp = s1;
-				s1 = s2;
-				s2 = tmp;
-			}
-
-			if (posDirection != -1) {
-				// get a correct s1 if there is "-" in s1 in order to get a correct position for s2.
-				boolean b1 = (s1.indexOf("-") != -1);
-				if (b1) {
-					/* 
-					 * align the six acquired sequences in sposArr1 and sposArr2 before s1(including s1), and put  
-					 * the correct sequence of s1 into arrList2. Then recalculate the offset of subS1 (we would get a new s1).
-					 */
-					if (i == 1) { //get the previous four sequences
-						String[] alignedStrs = new String[4];
-						alignedStrs[0] = arrList1.get(0);
-						alignedStrs[1] = arrList2.get(0);
-						alignedStrs[2] = arrList1.get(1);
-						alignedStrs[3] = arrList2.get(1);
-						int[] startPos = new int[4];
-						startPos[0] = sposArr1[0];
-						startPos[1] = sposArr2[0];
-						startPos[2] = sposArr1[1];
-						startPos[3] = sposArr2[1];
-						s1 = getCorrectS1(alignedStrs, startPos);
-					} else if (i >= 2) { //get the previous six sequences
-						String[] alignedStrs = new String[6];
-						alignedStrs[0] = arrList1.get(i-2);
-						alignedStrs[1] = arrList2.get(i-2);
-						alignedStrs[2] = arrList1.get(i-1);
-						alignedStrs[3] = arrList2.get(i-1);
-						alignedStrs[4] = arrList1.get(i);
-						alignedStrs[5] = arrList2.get(i);
-						int[] startPos = new int[6];
-						startPos[0] = sposArr1[i-2];
-						startPos[1] = sposArr2[i-2];
-						startPos[2] = sposArr1[i-1];
-						startPos[3] = sposArr2[i-1];
-						startPos[4] = sposArr1[i];
-						startPos[5] = sposArr2[i];
-						s1 = getCorrectS1(alignedStrs, startPos);
-					}
-					arrList2.set(i, s1);
-				}
-			}
+			String tSeq = curSeq.replace(strs[1].replace("-", ""), strs[1]);
+			curSeq = tSeq.substring(tSeq.indexOf(strs[1]));
 			
-			/*calculate starting position for s2
-			 * 1. Find the position of subS1 in s1, we name it as offset.
-			 * 2. Get starting position of s2.
-			 * 	Note that subS1 and subS2 may not be the overlap of s1 and s2, they can be shorter than the overlap.
-			 * 	For example, 
-			 * 		GAGACAAGACAAGGCTCTCCCCAAGTCCACTAGTTCAGACGGGACA
-			 *                            CTGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGC
-			 *  subS1 will be: GTCCACTAGTTCAGACGGGACA, not AAGTCCACTAGTTCAGACGGGACA.
-			 *  
-			 *  So we will find the position of subS2 in s2, and replace s2 with the new one, that is: 
-			 *  GTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGC. Correspondingly, we will replace s3 with the substring
-			 *  of the old s3 which corresponds to the new s2.
-			 *  
-			 *  3. If there is "-" in the new s2, we will correct it. Because "-" in s2 means there may be some error
-			 *  in s3, which will affect the starting position of the following sequence.
-			 */
-			//get the position of subS1 in s1.
-			s1Tmp = s1.replace("-", "");
-			s2Tmp = s2.replace("-", "");
-			String[] tStrs = g.d2.getLocalAlignment(s1Tmp, s2Tmp);
-			String subS1 = tStrs[0].replace("-", "");
-			int offset = s1.indexOf(subS1);
-			if (offset == -1) { 
-				for (int idx=0; idx<s1.length(); idx++) {
-					if (s1.charAt(idx) != '-') {
-						int tmpIdx = s1.substring(idx).replace("-", "").indexOf(subS1);
-						if (tmpIdx == 0) {
-							offset = idx;
-							break;
-						}
-					}
+			//addRead(tConsensus, curSeq, offset);
+			if (i == 1) {
+				int len1 = tConsensus.length();
+				int len2 = curSeq.length();
+				int end = Math.max(offset+len2, len1);
+				for (int j=0; j<end; j++) {
+					if ((j < len1) && (j-offset >= 0) && (j-offset < len2)) { //overlap part
+						bases.add(new SingleBase(tConsensus.charAt(j), curSeq.charAt(j-offset)));
+					} else if ((j-offset < 0) || (j-offset >= len2)) {
+						bases.add(new SingleBase(tConsensus.charAt(j)));
+					} else if (j >= len1) {
+						bases.add(new SingleBase(curSeq.charAt(j-offset)));
+					} 
 				}
-			} 
-			//get the starting position for s2
-			String subS2 = tStrs[1].replace("-", "");
-			String s3 = arrList2.get(i+1);
-			int tOffset = s2.indexOf(subS2);
-			if (tOffset == -1) { 
-				for (int idx=0; idx<s2.length(); idx++) {
-					if (s2.charAt(idx) != '-') {
-						int tmpIdx = s2.substring(idx).replace("-", "").indexOf(subS2);
-						if (tmpIdx == 0) {
-							if (posDirection == -1) {
-								offset = offset - idx;
-							} else {
-								tOffset = idx;
-							}
-							break;
-						}
-					}
-				}
+			
 			} else {
-				if (posDirection == -1) {
-					offset = offset - tOffset;
-				} 
-			}
-			if (posDirection != -1) {
-				//set s2 and s3 to be correct ones
-				s2 = s2.substring(tOffset);
-				s3 = s3.substring(tOffset);
-				arrList1.set(i+1, s2);
-				arrList2.set(i+1, s3);
+				int len1 = tConsensus.length();
+				int len2 = curSeq.length();
+				int end = Math.max(offset+len2, len1);
+				for (int j=offset; j<end; j++) {
+					if ((j < len1) && (j-offset < len2)) { //overlap part
+						char c1 = tConsensus.charAt(j);
+						char c2 = curSeq.charAt(j-offset);
+						if (c1 != '-') {
+							bases.get(j).addOneBase(c2);
+						} else {
+							bases.add(j, new SingleBase(c1, c2));
+						}
+					} else if (j >= len1) {
+						bases.add(new SingleBase(curSeq.charAt(j-offset)));
+					} 
+				}
 			}
 			
-			//set starting positions
-			offset = offset * posDirection;
-			sposArr1[i+1] = sposArr2[i]+offset;
-			sposArr2[i+1] = sposArr1[i+1];
-
-			// get a correct s2 if there is "-" in s2.
-			s2 = arrList1.get(i+1); // re-get s2 to avoid the effect of exchange and changes on it. 
-			boolean b2 = (s2.indexOf("-") != -1);
-			if (b2) {
-				/* 
-				 * align the seven acquired sequences in sposArr1 and sposArr2 before s2(including s1), and put  
-				 * the correct sequence of s2 into arrList1.
-				 */
-				if (i == 1) { //get the previous five sequences
-					String[] alignedStrs = new String[5];
-					alignedStrs[0] = arrList1.get(0);
-					alignedStrs[1] = arrList2.get(0);
-					alignedStrs[2] = arrList1.get(1);
-					alignedStrs[3] = arrList2.get(1);
-					alignedStrs[4] = arrList1.get(2);
-					int[] startPos = new int[5];
-					startPos[0] = sposArr1[0];
-					startPos[1] = sposArr2[0];
-					startPos[2] = sposArr1[1];
-					startPos[3] = sposArr2[1];
-					startPos[4] = sposArr1[2];
-					s2 = getCorrectS1(alignedStrs, startPos);
-				} else if (i >= 2) { //get the previous seven sequences
-					String[] alignedStrs = new String[7];
-					alignedStrs[0] = arrList1.get(i-2);
-					alignedStrs[1] = arrList2.get(i-2);
-					alignedStrs[2] = arrList1.get(i-1);
-					alignedStrs[3] = arrList2.get(i-1);
-					alignedStrs[4] = arrList1.get(i);
-					alignedStrs[5] = arrList2.get(i);
-					alignedStrs[6] = arrList1.get(i+1);
-					int[] startPos = new int[7];
-					startPos[0] = sposArr1[i-2];
-					startPos[1] = sposArr2[i-2];
-					startPos[2] = sposArr1[i-1];
-					startPos[3] = sposArr2[i-1];
-					startPos[4] = sposArr1[i];
-					startPos[5] = sposArr2[i];
-					startPos[6] = sposArr1[i+1];
-					s2 = getCorrectS1(alignedStrs, startPos);
-				}
-				arrList1.set(i+1, s2);
-				arrList2.set(i+1, s2);
-			}
-		} //end for
-		
-		
-		// Create an array which stores all the bases with the same position for all the ESTs.
-		int lenOfArray = resultArray[bPoint+1].pos
-						- resultArray[0].pos
-						+ resultArray[bPoint+1].seq.length(); 
-		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
-		for (int i=0; i<lenOfArray; i++) {
-			tmpArraylists[i] = new ArrayList<Character>();
-		}
-		// Put all the bases into the array
-		for (int i=breakPoint; i<=bPoint; i++) {
-			int tmpSPos1 = sposArr1[i];
-			String tmpStr1 = arrList1.get(i);
-			int tmpSPos2 = sposArr2[i];
-			String tmpStr2 = arrList2.get(i);
-			
-			//int f=0;
-			for (int j=0; j<tmpStr1.length(); j++) {
-				int p = tmpSPos1+j;
-				if ((p < lenOfArray) && (p >= 0)) {
-					tmpArraylists[p].add(tmpStr1.charAt(j));
-				}
-				//if (p==14575) f=1;
-			}
-/*			if (f==1) {
-				System.out.println("tmpSPos1="+tmpSPos1);
-				System.out.println(tmpStr1.charAt(14575-tmpSPos1));
-				System.out.println(tmpStr1);
-			}
-			f=0;
-*/			for (int j=0; j<tmpStr2.length(); j++) {
-				int p = tmpSPos2+j;
-				if ((p < lenOfArray) && (p >= 0)){
-					tmpArraylists[p].add(tmpStr2.charAt(j));
-				}
-				//if (p==14575) f=1;
-			}
-/*			if (f==1){
-				System.out.println("tmpSPos2="+tmpSPos2);
-				System.out.println(tmpStr2.charAt(14575-tmpSPos2));
-				System.out.println(tmpStr2+"\n\n");
-			}
-*/		}
-		
-		/* Calculate consensus base for each position, and put them into an char array.
-		 * Do not include those bases with less than 3/5 prepared-bases to remove errors near both ends.
-		 */
-		char[] consensus = new char[lenOfArray];
-		int start = 0;
-		int end = lenOfArray-1;
-		for (int i=0; i<=end; i++) {
-			if (tmpArraylists[i].size() >= 1) {
-				start = i;
-				break;
-			}
-		}
-		for (int i=end; i>=start; i--) {
-			if (tmpArraylists[i].size() >= 1) {
-				end = i;
-				break;
-			}
+			tConsensus = getCurConsensus(bases);
 		}
 		
-		//System.out.println("start=" + start + "; end=" + end);
-		for (int i=start; i<=end; i++) {
-			consensus[i-start] = getConsensusBase(tmpArraylists[i]);
-		}
-		
-		String retStr = String.valueOf(consensus).substring(0, end-start+1);
-		retStr = retStr.replace("-", "");
-		retStr = retStr.replace(" ", "");
-		
-		if (flag == 1) {//execute the function again
-			retStr = retStr + "\n" + reconstructSeq(b, bPoint+1);
-		} 
-		return retStr;
+		return tConsensus.replace("P", "");
 	}
-	
-	/*
-	 * Get the correct sequence for the last element in the input string array.
-	 * @param strs an String array which includes all the strings.
-	 * @param pos an int array which records the starting positions of all the elements in strs.
-	 * @return the consensus of the last element in strs.
-	 * 
-	 * Get the consensus according to the two input parameters, then extract the subsequence which corresponds
-	 * to the last element in strs from the consensus.
-	 */
-	private String getCorrectS1(String[] strs, int[] pos) {
-		int minPos = INT_MAX;
-		int maxPos = 0;
-		int len = strs.length;
-		for (int i=0; i<len; i++) {
-			if (pos[i] < minPos) {
-				minPos = pos[i];
-			}
-			if (pos[i] > maxPos) {
-				maxPos = pos[i];
-			}
-		}
-		
-		// Create an array which stores all the bases with the same position.
-		int lenOfArray = pos[len-1] - minPos + strs[len-1].length();
-		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
-		for (int i=0; i<lenOfArray; i++) {
-			tmpArraylists[i] = new ArrayList<Character>();
-		}
 
-		// Put all the bases into the array
-		for (int i=0; i<len; i++) {
-			int tmpSPos = pos[i] - minPos;
-			String tmpStr = strs[i];
-			for (int j=0; j<tmpStr.length(); j++) {
-				int p = tmpSPos+j;
-				if (p < lenOfArray) {
-					tmpArraylists[p].add(tmpStr.charAt(j));
-				}
-			}
-		}
-		
-		// Calculate consensus base for each position, and put them into an char array
-		char[] consensus = new char[lenOfArray];
-		for (int i=0; i<lenOfArray; i++) {
-			consensus[i] = getConsensusBase(tmpArraylists[i]);
-		}
-		
-		String retStr = String.valueOf(consensus);
-		retStr = retStr.substring(pos[len-1]-minPos);
+	
 
-		return retStr;
-	}
-	
-	
 	/*
 	 * Calculate the consensus base from several characters
 	 */
