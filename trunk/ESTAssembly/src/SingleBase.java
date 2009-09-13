@@ -1,3 +1,6 @@
+/*
+ * record one base in the consensus
+ */
 public class SingleBase {
 	char curBase;
 	int curBaseNum;
