@@ -25,19 +25,20 @@ public class ESTAssembly {
 	Graph g;	//graph to store all the ests. It is generated in 'readEstFile' function.
 	WeightedAdjacencyListGraph mstForG;	//minimum spanning tree generated from 'g'
 										//It is generated in 'createAlignArray' function.
-	ArrayList <Integer> leftMostNodes;
+	ArrayList<SixTuple> leftMostNodes;
+	InclusionNodes incNodes;
 
 	/*
 	 * store the position of aligned nodes
-	 * 1st-dimension: index of nodes in graph;
-	 * 2rd-dimension: 	the first is the index of node on the left, 
-	 * 					the second is the overlap length with + or -.
-	 * 					the third is the distance with + or -.
-	 * 					the fourth is the index of node on the right, 
-	 * 					the fifth is the overlap length with + or -.
-	 * 					the sixth is the distance with + or -.
+	 * index of nodes in graph;
+	 * the first is the index of node on the left, 
+	 * the second is the overlap length with + or -.
+	 * the third is the distance with + or -.
+	 * the fourth is the index of node on the right, 
+	 * the fifth is the overlap length with + or -.
+	 * the sixth is the distance with + or -.
 	 */
-	SixTuple[] alignArray;
+	ArrayList<SixTuple> alignArray;
 	int[] sPos;	//starting positions of all the nodes, initialized in "processAlignArray" function.
 				//the index in the array is the index of the node, the value is its starting position. 
 	int[] sPosDebug;	//starting positions of all the nodes, initialized in "processAlignArray" function.
@@ -55,7 +56,8 @@ public class ESTAssembly {
 		sPos = null;
 		sPosDebug = null;
 		g = new Graph(props);
-		leftMostNodes = new ArrayList<Integer> ();
+		leftMostNodes = new ArrayList<SixTuple> ();
+		incNodes = new InclusionNodes();
 	}
 	
 	/*
@@ -137,47 +139,71 @@ public class ESTAssembly {
 		mstForG = g.readMST(mstFile);
 		System.out.println("End to generate MST.");
 		System.out.println("Start to generate 6-tuples.");
-		alignArray = g.get2CloseNodesFromMST(mstForG);
+		alignArray = g.get2CloseNodesFromMST(mstForG, incNodes);
+		System.out.println("There are " + incNodes.getSize() + " nodes in the inclusion list.");
+		//incNodes.printAllNodes();
+		System.out.println("There are " + alignArray.size() + " nodes in alignArray.");
 	}
 
 	/* 
 	 * Get the assumed left ends(alignNodes[][0]==-1), check them to find all the real left ends.
 	 */
 	public void processAlignArray() {
+		ArrayList<SixTuple> rightMostNodes = new ArrayList<SixTuple> ();
 		//get all the nodes which has no left nodes to them
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode == -1) {
-				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			if (curTuple.leftNode == -1) {
+				leftMostNodes.add(curTuple);	//store sixtuple of the node
+			}
+			if (curTuple.rightNode == -1) {
+				rightMostNodes.add(curTuple);	//store sixtuple of the node
 			}
 		}
 
 		//Re-calculating six-tuples for those assumed left ends and put the new six-tuple into alignArray.
 		int numOfLeftMostNodes = leftMostNodes.size();
 		System.out.println("The number of original left ends is " + numOfLeftMostNodes);
+		System.out.println("The number of original right ends is " + rightMostNodes.size());
 		if (numOfLeftMostNodes > 1) {
 			for (int i=0; i<leftMostNodes.size(); i++) {
-				int cNode = leftMostNodes.get(i).intValue();
-				SixTuple lNode = g.get2CloseNodesFromGrand(mstForG, cNode, alignArray[cNode]);
-				alignArray[cNode].leftNode = lNode.leftNode;
-				alignArray[cNode].lOvlLen = lNode.lOvlLen;	//overlap length
-				alignArray[cNode].lDis = lNode.lDis;	//distance
-				
-				if (alignArray[cNode].rDis > lNode.rDis) { //get a smaller distance
-					alignArray[cNode].rightNode = lNode.rightNode;
-					alignArray[cNode].rOvlLen = lNode.rOvlLen;
-					alignArray[cNode].rDis = lNode.rDis;
+				SixTuple curTuple = leftMostNodes.get(i);
+				int cNode = curTuple.curNode;
+				SixTuple lNode = g.get2CloseNodesFromGrand(mstForG, cNode, curTuple, incNodes);
+				curTuple.leftNode = lNode.leftNode;
+				curTuple.lOvlLen = lNode.lOvlLen;	//overlap length
+				curTuple.lDis = lNode.lDis;	//distance
+				if (curTuple.rDis > lNode.rDis) { //get a smaller distance
+					curTuple.rightNode = lNode.rightNode;
+					curTuple.rOvlLen = lNode.rOvlLen;
+					curTuple.rDis = lNode.rDis;
 				}
 			}
 		} 
-		
+		for (int i=0; i<rightMostNodes.size(); i++) {
+			SixTuple curTuple = rightMostNodes.get(i);
+			int cNode = curTuple.curNode;
+			SixTuple lNode = g.get2CloseNodesFromGrand(mstForG, cNode, curTuple, incNodes);
+			if (lNode.rightNode != -1) {
+				curTuple.rightNode = lNode.rightNode;
+				curTuple.rOvlLen = lNode.rOvlLen;
+				curTuple.rDis = lNode.rDis;
+			}
+		}
 		
 		leftMostNodes.clear();
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode == -1) {
-				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
+		rightMostNodes.clear();
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			if (curTuple.leftNode == -1) {
+				leftMostNodes.add(curTuple);	//store sixtuple of the node
+			}
+			if (curTuple.rightNode == -1) {
+				rightMostNodes.add(curTuple);	//store sixtuple of the node
 			}
 		}
 		System.out.println("There are " + leftMostNodes.size() + " left-most nodes after running 3 levels.");
+		System.out.println("There are " + rightMostNodes.size() + " right-most nodes after running 3 levels.");
 		
 		/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
 		 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which 
@@ -185,25 +211,42 @@ public class ESTAssembly {
 		 * If we fail to find any node, we consider it a real left end.
 		 */
 		for (int i=0; i<leftMostNodes.size(); i++) {
-			int tEnd = leftMostNodes.get(i).intValue(); //index of the node
-			SixTuple tmpTuple = g.checkLeftEndFromMST(mstForG, tEnd, alignArray[tEnd]);
+			SixTuple curTuple = leftMostNodes.get(i);
+			int tEnd = curTuple.curNode; //index of the node
+			SixTuple tmpTuple = g.checkLeftEndFromMST(mstForG, tEnd, curTuple, incNodes);
 			if (tmpTuple != null) {
-				alignArray[tEnd].leftNode = tmpTuple.leftNode;
-				alignArray[tEnd].lOvlLen = tmpTuple.lOvlLen;	//overlap length
-				alignArray[tEnd].lDis = tmpTuple.lDis;	//distance
-				alignArray[tEnd].rightNode = tmpTuple.rightNode;
-				alignArray[tEnd].rOvlLen = tmpTuple.rOvlLen;
-				alignArray[tEnd].rDis = tmpTuple.rDis;
+				curTuple.leftNode = tmpTuple.leftNode;
+				curTuple.lOvlLen = tmpTuple.lOvlLen;	//overlap length
+				curTuple.lDis = tmpTuple.lDis;	//distance
+				curTuple.rightNode = tmpTuple.rightNode;
+				curTuple.rOvlLen = tmpTuple.rOvlLen;
+				curTuple.rDis = tmpTuple.rDis;
+			}
+		}
+		for (int i=0; i<rightMostNodes.size(); i++) {
+			SixTuple curTuple = rightMostNodes.get(i);
+			int tEnd = curTuple.curNode; //index of the node
+			SixTuple tmpTuple = g.checkRightEndFromMST(mstForG, tEnd, curTuple, incNodes);
+			if (tmpTuple != null) {
+				curTuple.rightNode = tmpTuple.rightNode;
+				curTuple.rOvlLen = tmpTuple.rOvlLen;
+				curTuple.rDis = tmpTuple.rDis;
 			}
 		}
 		
 		leftMostNodes.clear();
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode == -1) {
-				leftMostNodes.add(Integer.valueOf(i));	//store index of the node
+		rightMostNodes.clear();
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			if (curTuple.leftNode == -1) {
+				leftMostNodes.add(curTuple);	//store sixtuple of the node
+			}
+			if (curTuple.rightNode == -1) {
+				rightMostNodes.add(curTuple);	//store sixtuple of the node
 			}
 		}
 		System.out.println("\nThere are " + leftMostNodes.size() + " left-most nodes after checking left ends.");
+		System.out.println("\nThere are " + rightMostNodes.size() + " right-most nodes after checking right ends.");
 		
 		
 		
@@ -216,31 +259,34 @@ public class ESTAssembly {
 		 *  	if there is no edge, weight=INT_MAX.
 		 */
 		int tLen = 0;
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode != -1) {
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			if (curTuple.leftNode != -1) {
 				tLen++;
 			}
-			if (alignArray[i].rightNode != -1) {
+			if (curTuple.rightNode != -1) {
 				tLen++;
 			}
 		}
 		
 		int[][] tmpDGraph = new int[tLen][4];
 		int tmpIndex = 0;
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode != -1) {
-				tmpDGraph[tmpIndex][0] = alignArray[i].leftNode;
-				tmpDGraph[tmpIndex][1] = i;
-				tmpDGraph[tmpIndex][2] = Math.abs(alignArray[i].lDis);	//distance
-				tmpDGraph[tmpIndex][3] = Math.abs(alignArray[i].lOvlLen);	//overlap length
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			int curIdx = curTuple.curNode;
+			if (curTuple.leftNode != -1) {
+				tmpDGraph[tmpIndex][0] = curTuple.leftNode;
+				tmpDGraph[tmpIndex][1] = curIdx;
+				tmpDGraph[tmpIndex][2] = Math.abs(curTuple.lDis);	//distance
+				tmpDGraph[tmpIndex][3] = Math.abs(curTuple.lOvlLen);	//overlap length
 				tmpIndex++;
 			}
 			
-			if (alignArray[i].rightNode != -1) {
-				tmpDGraph[tmpIndex][0] = i;
-				tmpDGraph[tmpIndex][1] = alignArray[i].rightNode;
-				tmpDGraph[tmpIndex][2] = alignArray[i].rDis;	//distance
-				tmpDGraph[tmpIndex][3] = alignArray[i].rOvlLen;	//overlap length
+			if (curTuple.rightNode != -1) {
+				tmpDGraph[tmpIndex][0] = curIdx;
+				tmpDGraph[tmpIndex][1] = curTuple.rightNode;
+				tmpDGraph[tmpIndex][2] = curTuple.rDis;	//distance
+				tmpDGraph[tmpIndex][3] = curTuple.rOvlLen;	//overlap length
 				tmpIndex++;
 			}
 		}
@@ -253,16 +299,17 @@ public class ESTAssembly {
 		 */
 		//Get all the nodes which has the value of -1 in alignArray[x][0]
 		
-		ArrayList <Integer> tmpLeftNodes = new ArrayList<Integer> ();
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode == -1) {
-				tmpLeftNodes.add(Integer.valueOf(i));	//store index of the node
+		ArrayList<SixTuple> tmpLeftNodes = new ArrayList<SixTuple> ();
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			if (curTuple.leftNode == -1) {
+				tmpLeftNodes.add(curTuple);	//store index of the node
 			}
 		}
 		//remove false left ends
 		leftMostNodes.clear();
 		for (int i=0; i<tmpLeftNodes.size(); i++) {
-			int tEnd = tmpLeftNodes.get(i).intValue();
+			int tEnd = tmpLeftNodes.get(i).curNode;
 			int f = 0;
 			//if the left end appears in second element of dGraph, that means some 
 			//node is on its left, so it is not a real left end.
@@ -273,7 +320,7 @@ public class ESTAssembly {
 				}
 			}
 			if (f == 0) {
-				leftMostNodes.add(Integer.valueOf(tEnd));
+				leftMostNodes.add(tmpLeftNodes.get(i));
 			}
 		}
 		System.out.println("\nThere are " + leftMostNodes.size() + " left-most nodes after processing.");
@@ -339,10 +386,12 @@ public class ESTAssembly {
 
 	static class StartPos implements Comparable<StartPos> {
 		int pos;
+		int index; //index of the node
 		String seq;
-		public StartPos(int p, String s) {
+		public StartPos(int p, String s, int idx) {
 			pos = p;
 			seq = s;
+			index = idx;
 		}
 		
 		public int compareTo(StartPos other) {
@@ -418,11 +467,11 @@ public class ESTAssembly {
 		 */
 
 		int len = 0;
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode != -1) {
+		for (int i=0; i<alignArray.size(); i++) {
+			if (alignArray.get(i).leftNode != -1) {
 				len++;
 			}
-			if (alignArray[i].rightNode != -1) {
+			if (alignArray.get(i).rightNode != -1) {
 				len++;
 			}
 		}
@@ -431,20 +480,21 @@ public class ESTAssembly {
 		 */
 		int[][] dGraph = new int[len][4];
 		int indexOfDGraph = 0;
-		for (int i=0; i<alignArray.length; i++) {
-			if (alignArray[i].leftNode != -1) {
-				dGraph[indexOfDGraph][0] = alignArray[i].leftNode;
-				dGraph[indexOfDGraph][1] = i;
-				dGraph[indexOfDGraph][2] = Math.abs(alignArray[i].lDis);	//distance
-				dGraph[indexOfDGraph][3] = Math.abs(alignArray[i].lOvlLen);	//overlap length
+		for (int i=0; i<alignArray.size(); i++) {
+			SixTuple curTuple = alignArray.get(i);
+			if (curTuple.leftNode != -1) {
+				dGraph[indexOfDGraph][0] = curTuple.leftNode;
+				dGraph[indexOfDGraph][1] = curTuple.curNode;
+				dGraph[indexOfDGraph][2] = Math.abs(curTuple.lDis);	//distance
+				dGraph[indexOfDGraph][3] = Math.abs(curTuple.lOvlLen);	//overlap length
 				indexOfDGraph++;
 			}
 			
-			if (alignArray[i].rightNode != -1) {
-				dGraph[indexOfDGraph][0] = i;
-				dGraph[indexOfDGraph][1] = alignArray[i].rightNode;
-				dGraph[indexOfDGraph][2] = alignArray[i].rDis;	//distance
-				dGraph[indexOfDGraph][3] = alignArray[i].rOvlLen;	//overlap length
+			if (curTuple.rightNode != -1) {
+				dGraph[indexOfDGraph][0] = curTuple.curNode;
+				dGraph[indexOfDGraph][1] = curTuple.rightNode;
+				dGraph[indexOfDGraph][2] = curTuple.rDis;	//distance
+				dGraph[indexOfDGraph][3] = curTuple.rOvlLen;	//overlap length
 				indexOfDGraph++;
 			}
 		}
@@ -472,11 +522,11 @@ public class ESTAssembly {
 		ArrayList<String> lastEsts = new ArrayList<String> ();
 		ArrayList<String> firstEsts = new ArrayList<String> ();
 		
-		sPosDebug = new int[alignArray.length];	
+		sPosDebug = new int[g.graphNodes.size()];	
 		for (int i=0; i<leftMostNodes.size(); i++) { //start for
-			sPos = new int[alignArray.length];	//store starting positions of all the nodes
+			sPos = new int[g.graphNodes.size()];	//store starting positions of all the nodes
 
-			int leftEnd = leftMostNodes.get(i).intValue();
+			int leftEnd = leftMostNodes.get(i).curNode;
 			printLeftEndInfo(leftEnd);
 			
 			// Calculate starting positions using minimum spanning tree starting from this left-end node.
@@ -493,7 +543,7 @@ public class ESTAssembly {
 					dGraph[t][1] = 0;
 				}
 			}
-			primMST = constructMinTree(alignArray.length, dGraph);
+			primMST = constructMinTree(g.graphNodes.size(), dGraph); //the first param is the total number of ESTs.
 
 			//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
 			sPos[leftEnd] = sPos[0];
@@ -517,10 +567,10 @@ public class ESTAssembly {
 			ArrayList<StartPos> tmpArray = new ArrayList<StartPos> ();
 			for (int j=0; j<sPos.length; j++) {
 				if ((j == leftEnd) || (sPos[j] != 0)) {
-					tmpArray.add(new StartPos(sPos[j], g.getSeqOfNode(j)));
+					tmpArray.add(new StartPos(sPos[j], g.getSeqOfNode(j), j));
 				}
 			}
-			System.out.println(tmpArray.size() + " nodes are used to reconstruct the sequence.\n");
+
 			if (tmpArray.size() == 1) { //singleton
 				allSingletons.add(g.getCommentOfNode(leftEnd) + "\n" + g.getSeqOfNode(leftEnd));
 				continue;
@@ -755,18 +805,32 @@ public class ESTAssembly {
 		} else if (sizeOfa == 1) {
 			return a.get(0).seq;
 		}
-		StartPos[] resultArray = new StartPos[sizeOfa]; //store the starting positions of ests
+		StartPos[] tmpResultArray = new StartPos[sizeOfa]; //store the starting positions of ests
 		for (int i=0; i<sizeOfa; i++) {
-			resultArray[i] = a.get(i);
+			tmpResultArray[i] = a.get(i);
 		}
 		MergeSort merge = new MergeSort();
-		merge.sort(resultArray);
-
+		merge.sort(tmpResultArray);
+		
+		ArrayList<StartPos> resultArray = new ArrayList<StartPos> ();
+		for (int i=0; i<tmpResultArray.length; i++) {
+			resultArray.add(tmpResultArray[i]);
+		}
+		resultArray = addInclusionNodes(resultArray);  //add all those related inclusion nodes into it for reconstruction.
+		
+		System.out.println(resultArray.size() + " nodes are used to reconstruct the sequence.\n");
+/*		System.out.println("These nodes are:");
+		for (int r=0; r<resultArray.size(); r++) {
+			System.out.print(resultArray.get(r).index+"  ");
+		}
+		System.out.println();
+*/		
 		ArrayList<SingleBase> bases = new ArrayList<SingleBase> ();
-		String tConsensus = resultArray[0].seq;
+		String tConsensus = resultArray.get(0).seq;
 		String curSeq = "";
-		for (int i=1; i<resultArray.length-1; i++) {
-			curSeq = resultArray[i].seq;
+		int len = resultArray.size() - 1;
+		for (int i=1; i<len; i++) {
+			curSeq = resultArray.get(i).seq;
 			String[] strs = g.d2.getLocalAlignment(tConsensus, curSeq);
 			tConsensus = tConsensus.replace(strs[0].replace("-", ""), strs[0]);
 			int offset = tConsensus.indexOf(strs[0]);
@@ -774,7 +838,6 @@ public class ESTAssembly {
 			String tSeq = curSeq.replace(strs[1].replace("-", ""), strs[1]);
 			curSeq = tSeq.substring(tSeq.indexOf(strs[1]));
 			
-			//addRead(tConsensus, curSeq, offset);
 			if (i == 1) {
 				int len1 = tConsensus.length();
 				int len2 = curSeq.length();
@@ -814,8 +877,86 @@ public class ESTAssembly {
 		return tConsensus.replace("P", "");
 	}
 
+	/*
+	 * Add all the inclusion nodes into the input arraylist.
+	 * For each element in the arraylist, put its corresponding node just after it. 
+	 */
+	private ArrayList<StartPos> addInclusionNodes(ArrayList<StartPos> input) {
+		ArrayList<StartPos> retList = input;
+		int size = retList.size();
+		ArrayList<StartPos> tmpList = new ArrayList<StartPos>();
+		for (int i=0; i<size; i++) {
+			tmpList.add(retList.get(i));
+		}
+		
+		int addedNum = 1;
+		for (int i=0; i<size; i++) {
+			int curIdx = tmpList.get(i).index;
+			int[] chdIdx = incNodes.containPNode(curIdx); //inclusion children index of the curIdx if exist.
+			if (chdIdx.length > 0) {
+				for (int j=0; j<chdIdx.length; j++) {
+					retList.add(i+addedNum, new StartPos(0, g.getSeqOfNode(chdIdx[j]),0));
+					addedNum++;
+				}
+			}
+		}
+		return retList;
+	}
 	
+	/*
+	 * Get the correct sequence for the last element in the input string array.
+	 * @param strs an String array which includes all the strings.
+	 * @param pos an int array which records the starting positions of all the elements in strs.
+	 * @return the consensus of the last element in strs.
+	 * 
+	 * Get the consensus according to the two input parameters, then extract the subsequence which corresponds
+	 * to the last element in strs from the consensus.
+	 */
+	private String getCorrectS1(String[] strs, int[] pos) {
+		int minPos = INT_MAX;
+		int maxPos = 0;
+		int len = strs.length;
+		for (int i=0; i<len; i++) {
+			if (pos[i] < minPos) {
+				minPos = pos[i];
+			}
+			if (pos[i] > maxPos) {
+				maxPos = pos[i];
+			}
+		}
+		
+		// Create an array which stores all the bases with the same position.
+		int lenOfArray = pos[len-1] - minPos + strs[len-1].length();
+		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			tmpArraylists[i] = new ArrayList<Character>();
+		}
 
+		// Put all the bases into the array
+		for (int i=0; i<len; i++) {
+			int tmpSPos = pos[i] - minPos;
+			String tmpStr = strs[i];
+			for (int j=0; j<tmpStr.length(); j++) {
+				int p = tmpSPos+j;
+				if (p < lenOfArray) {
+					tmpArraylists[p].add(tmpStr.charAt(j));
+				}
+			}
+		}
+		
+		// Calculate consensus base for each position, and put them into an char array
+		char[] consensus = new char[lenOfArray];
+		for (int i=0; i<lenOfArray; i++) {
+			consensus[i] = getConsensusBase(tmpArraylists[i]);
+		}
+		
+		String retStr = String.valueOf(consensus);
+		retStr = retStr.substring(pos[len-1]-minPos);
+
+		return retStr;
+	}
+	
+	
 	/*
 	 * Calculate the consensus base from several characters
 	 */

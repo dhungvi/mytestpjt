@@ -120,23 +120,53 @@ public class Graph {
 		return mst;
 	}
 
+	private ArrayList<SixTuple> handleInclusion(WeightedAdjacencyListGraph mst, InclusionNodes inc) {
+		ArrayList<SixTuple> nodes = new ArrayList<SixTuple>();
+		int nOfNodes = mst.getCardV();
+		
+		for (int i=0; i<nOfNodes; i++) {
+			WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(i);
+			boolean flag = true;
+			while (ite.hasNext()) {
+				Vertex v = (Vertex) ite.next();
+				int index = v.getIndex();
+				
+				
+				String curSeq = graphNodes.get(i).getNodeStr();
+				String comSeq = graphNodes.get(index).getNodeStr();
+				if (curSeq.length() <= comSeq.length()) {
+					if (d2.checkInclusion(curSeq, comSeq)) {
+						inc.addNode(i, index); //get rid of i and put it into inclusion list.
+						flag = false;
+						break;
+					} 
+				} 
+			}
+			if (flag) {
+				nodes.add(new SixTuple(i));
+			}
+		}
+		return nodes;
+		
+	}
 	/**
 	 * Get two closest nodes which is on the left and on the right to every node 
-	 * from the input minimum spanning tree, and store the data into an array.
-	 * This function finds parent and children of current node, and calculates
-	 * overlap distance between the node and others, select the two nodes with minimum 
-	 * left and right overlap distance.
+	 * from the input minimum spanning tree, and store the data into an array list.
+	 * This function removes inclusion nodes from the tree, and then finds parent and 
+	 * children for all the left nodes, and calculates overlap distance between the node and 
+	 * others, select the two nodes with minimum left and right overlap distance.
 	 * 
 	 * 
 	 * @param mst a Minimum Spanning Tree.
-	 * @return an array of SixTuple which stores two closest nodes which is to the left and to the right 
+	 * @return an array list of SixTuple which stores two closest nodes which is to the left and to the right 
 	 * respectively for all the nodes in the tree. 
 	 */
-	public SixTuple[] get2CloseNodesFromMST(WeightedAdjacencyListGraph mst) {
-		int nOfNodes = mst.getCardV();
-		SixTuple[] alignedNodes = new SixTuple[nOfNodes];
+	public ArrayList<SixTuple> get2CloseNodesFromMST(WeightedAdjacencyListGraph mst, InclusionNodes inc) {
+		ArrayList<SixTuple> alignedNodes = handleInclusion(mst, inc);
+		int nOfNodes = alignedNodes.size();
 		
 		for (int i=0; i<nOfNodes; i++) {
+			int curIdx = alignedNodes.get(i).curNode;
 			int leftNode = -1;
 			int rightNode = -1;
 			int maxLeft = INT_MIN;	//maximum left distance because left distance is negative
@@ -144,11 +174,13 @@ public class Graph {
 			int overlapLeft = 0;
 			int overlapRight = 0;
 			
-			WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(i);
+			WeightedEdgeIterator ite = (WeightedEdgeIterator) mst.edgeIterator(curIdx);
 			while (ite.hasNext()) {
 				Vertex v = (Vertex) ite.next();
 				int index = v.getIndex();
-				int[] ovlDis = (d2).getOVLDistance(graphNodes.get(i).getNodeStr(), 
+				if (inc.containInclusionNode(index)) continue; 
+				
+				int[] ovlDis = (d2).getOVLDistance(graphNodes.get(curIdx).getNodeStr(), 
 												graphNodes.get(index).getNodeStr());
 				if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 					if (ovlDis[0] < 0) {
@@ -183,7 +215,7 @@ public class Graph {
 			//rightNode, index of node on the right
 			//overlapRight, overlap length
 			//minRight, overlap distance
-			alignedNodes[i] = new SixTuple(leftNode, overlapLeft, maxLeft, rightNode, overlapRight, minRight);
+			alignedNodes.get(i).setSixTuple(leftNode, overlapLeft, maxLeft, rightNode, overlapRight, minRight);
 		}
 		return alignedNodes;
 	}
@@ -208,7 +240,7 @@ public class Graph {
 	 * 						For the second and fifth one, if no node is found, the value is 0;
 	 * 						For the third and sixth one, if no node is found, the value is INT_MIN or INT_MAX.
 	 */
-	public SixTuple get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple) {
+	public SixTuple get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple, InclusionNodes inc) {
 		SixTuple closeNode = new SixTuple();
 		
 		int leftNode = -1;
@@ -238,6 +270,7 @@ public class Graph {
 					Vertex v = (Vertex) ite.next();
 					int tIndex = v.getIndex();
 					tmpStack.push(Integer.valueOf(tIndex));
+					
 					if (i != 0) { //Do not include parents and children because they have been processed.
 						allNodes.push(Integer.valueOf(tIndex));
 					}
@@ -250,6 +283,8 @@ public class Graph {
 		String s1 = graphNodes.get(index).getNodeStr();
 		while (!allNodes.isEmpty()) {
 			int tmpIndex = allNodes.pop();
+			if (inc.containInclusionNode(tmpIndex)) continue; 
+
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
 			int[] ovlDis = (d2).getOVLDistance(s1, s2);
 			
@@ -305,7 +340,7 @@ public class Graph {
 	 * @return SixTuple which stores two closest nodes which is to the left and to the right if it is not left end;
 	 * if it does, six-tuple.leftEnd = -1.
 	 */
-	public SixTuple checkLeftEndFromMST(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple) {
+	public SixTuple checkLeftEndFromMST(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple, InclusionNodes inc) {
 		if (numOfLevels == 0) { //keep checking until leaves
 			numOfLevels = INT_MAX;
 		}
@@ -326,15 +361,11 @@ public class Graph {
 			System.out.println("GetNodeFromMST for foundLevel=" + foundLevel
 					+ "; index=" + index);
 			System.out.println("\tnumber of nodes = " + nodes[0].size());
-/*			for (int t=0; t<nodes[0].size(); t++) {
-				System.out.print(nodes[0].get(t)+"  ");
-			}
-			System.out.println();
-*/			
+		
 			if (nodes[0].size() == 0) {
 				break;
 			} else {
-				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple);
+				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple, inc);
 				if (closeNode.leftNode != -1) {
 					System.out.println("findAdjacentNode for index=" + index);
 					return closeNode;
@@ -346,13 +377,44 @@ public class Graph {
 		return null;
 	}
 	
+	public SixTuple checkRightEndFromMST(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple, InclusionNodes inc) {
+		if (numOfLevels == 0) { //keep checking until leaves
+			numOfLevels = INT_MAX;
+		}
+		
+		Stack<Integer>[] nodes = new Stack[2];
+		nodes[0] = new Stack<Integer>();
+		nodes[1] = new Stack<Integer>();
+		nodes[0].push(Integer.valueOf(index));
+		nodes[1].push(Integer.valueOf(-1));
+		
+		for (int i=0; i<3; i++) { //skip over all the nodes within 3 levels
+			nodes = getNodesFromMST(mst, nodes);
+		}
+		
+		for (int foundLevel=4; foundLevel<=numOfLevels; foundLevel++) { //start from level 4
+			nodes = getNodesFromMST(mst, nodes);
+			
+			if (nodes[0].size() == 0) {
+				break;
+			} else {
+				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple, inc);
+				if (closeNode.rightNode != -1) {
+					return closeNode;
+				}
+			}
+		}
+		
+		return null;
+	}
+
 	/*
 	 * find the most adjacent node to the current node from allNodes.
 	 * @param allNodes Store indices of all the nodes which will be compared to the current node.
 	 * @param index The index of current node.
 	 * @sixTuple The sixTuple for the current node.
 	 */
-	private SixTuple findAdjacentNode(Stack<Integer> nodes, int index, SixTuple sixTuple) {
+	private SixTuple findAdjacentNode(Stack<Integer> nodes, int index, SixTuple sixTuple, InclusionNodes inc) {
 		Stack<Integer> allNodes = new Stack<Integer> (); //put all the values of nodes into another stack so that we won't change nodes(it's a pointer) because it may be used by the calling method.
 		for (int i=0; i<nodes.size(); i++) { //get(0) will get the bottom element of the stack
 			allNodes.push(nodes.get(i));
@@ -371,6 +433,8 @@ public class Graph {
 		String s1 = graphNodes.get(index).getNodeStr();
 		while (!allNodes.empty()) {
 			int tmpIndex = (Integer) allNodes.pop();
+			if (inc.containInclusionNode(tmpIndex)) continue; 
+
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
 			int[] ovlDis = (d2).getOVLDistance(s1, s2);
 			
@@ -433,6 +497,7 @@ public class Graph {
 			while (ite.hasNext()) {
 				Vertex v = (Vertex) ite.next();
 				int index2 = v.getIndex();
+				
 				if (parentIndex != index2) {
 					ret[0].push(Integer.valueOf(index2));
 					ret[1].push(Integer.valueOf(curIndex));
