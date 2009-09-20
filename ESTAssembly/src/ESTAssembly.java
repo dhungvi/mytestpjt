@@ -519,7 +519,6 @@ public class ESTAssembly {
 		String printStr = "";
 		ArrayList<String> allConsensus= new ArrayList<String> ();	//store all the generated sequences
 		ArrayList<String> allSingletons= new ArrayList<String> ();	//store all the singletons
-		ArrayList<String> lastEsts = new ArrayList<String> ();
 		ArrayList<String> firstEsts = new ArrayList<String> ();
 		
 		sPosDebug = new int[g.graphNodes.size()];	
@@ -576,7 +575,6 @@ public class ESTAssembly {
 				continue;
 			} 
 			
-			lastEsts.add(tmpArray.get(tmpArray.size()-1).seq);
 			firstEsts.add(g.getSeqOfNode(leftEnd));
 
 			String tStr = reconstructSeq(tmpArray);
@@ -603,7 +601,7 @@ public class ESTAssembly {
 		int tmpSize = allConsensus.size();
 		if (tmpSize > 1) { 
 			printStr = printStr + "The consensus from above " + tmpSize + " sequences:\n";
-			ArrayList<String> s = processMoreConsensus(allConsensus, firstEsts, lastEsts);
+			ArrayList<String> s = processMoreConsensus(allConsensus, firstEsts);
 			for (int p=0; p<s.size(); p++) {
 				printStr = printStr + s.get(p) + "\n";
 			}
@@ -623,24 +621,23 @@ public class ESTAssembly {
 	 /* 
 	 * This method is used when there are more than one consensus in the assembly.
 	 * Then number of consensus is equal to the number of left ends. And the different consensus does not mean that they are 
-	 * not overlapped(or they correspond to different part of the gene). Recall that we treat inclusion as infinite distance, 
-	 * so some left ends may include each other, and consensus from them overlap with each other.
+	 * not overlapped(or they correspond to different part of the gene). Some left ends may include each other, and consensus 
+	 * from them overlap with each other.
 	 * This method is designed to remove all the dependent consensus and extract all the independent ones, which means, we intend 
-	 * to find all the consensus which represent different part of the gene.. 
+	 * to find all the consensus which represent different part of the gene.
 	 * 
 	 * @param s an arraylist which includes all the generated consensus from the calling method;
 	 * 		 	firstEsts an arraylist which includes all the left end sequence corresponding to all the consensus;
-	 * 			lastEsts an arraylist which includes all last est sequence corresponding to all the consensus.
 	 * @return the combined consensus.
 	 */
-	 private ArrayList<String> processMoreConsensus(ArrayList<String> s, ArrayList<String> firstEsts, ArrayList<String> lastEsts) {
+	 private ArrayList<String> processMoreConsensus(ArrayList<String> s, ArrayList<String> firstEsts) {
 		//String retStr = "";
 		ArrayList<String> allOutputContigs= new ArrayList<String> ();	//store all the generated sequences
 		
 		int sizeOfs = s.size();
 		Consensus[] resultArray = new Consensus[sizeOfs]; //store the starting positions of ests
 		for (int i=0; i<sizeOfs; i++) {
-			resultArray[i] = new Consensus(firstEsts.get(i).length(), s.get(i), firstEsts.get(i), lastEsts.get(i));
+			resultArray[i] = new Consensus(firstEsts.get(i).length(), s.get(i), firstEsts.get(i));
 		}
 		MergeSort merge = new MergeSort();
 		merge.sort(resultArray);
@@ -680,12 +677,10 @@ public class ESTAssembly {
 		 int lenOfFirstEst;
 		 String seq;
 		 String firstEst;
-		 String lastEst;
-		 public Consensus(int p, String s1, String s2, String s3) {
+		 public Consensus(int p, String s1, String s2) {
 			 lenOfFirstEst = p;
 			 seq = s1;
 			 firstEst = s2;
-			 lastEst = s3;
 		 }
 
 		 public int compareTo(Consensus other) {
@@ -706,84 +701,41 @@ public class ESTAssembly {
 	/*
 	 * This method is called by "processMoreConsensus".
 	 * This method is used to process those consensus which starts from the left ends that include each other.
-	 * These input consensus originate from more than one left ends which include each other. Although the 
-	 * consensus are different at their beginning, they often end with the same characters.
-	 * For example, they will look like:
-	 * AGGCTCTCCCCAAGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
-	 *                       TTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
-	 *               TCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
-	 *           CAAGTCCACTAGTTCAGACGGGACAATATAACGGACTGCATGGCAGCGCATGTCGAGCTCCACGCGCATCTACACTCACCTCGCATGGACTGCACAAT
+	 * These input consensus originate from more than one left ends which include each other. 
 	 * 
-	 * So in this method, we reverse all the consensus, and get one consensus from them. 
-	 * 
-	 * In some situation, the consensus may not ends with the same character even if their left ends have inclusion.
-	 * In this method, we judge if two consensus ends with the same Est. If it does, we process them. If not, 
-	 * we will judge if the consensus are part of the longer one. If it does, we will return the longer one. If not,
-	 * we will add it to the return string and return it.
+	 * Here we combine all the consensus into one.
+	 * If there are two in includeStrs, we return the longer one. If there are more than or equal to three, 
+	 * we combine them by calling "reconstructSeq".
 	 */
 	private String processMoreConsensusWithInclusion(ArrayList<Consensus> includeStrs) {
-		//ArrayList<String> s, ArrayList<String> lastEsts
-		int maxLen = 0; //the maximal length of all the strings.
-		int indexOfMax = -1;
+		int maxLen = 0; //the maximal length of the first EST.
 		for (int i=0; i<includeStrs.size(); i++) {
-			int tLen = includeStrs.get(i).seq.length();
+			int tLen = includeStrs.get(i).lenOfFirstEst;
 			if (tLen > maxLen) {
 				maxLen = tLen;
-				indexOfMax = i;
-			}
-		}
-		String maxLastStr = includeStrs.get(indexOfMax).lastEst;
-		ArrayList<String> tmpStr1 = new ArrayList<String>(); //will be processed
-		ArrayList<String> tmpStr2 = new ArrayList<String>(); //won't be processed
-		tmpStr1.add(includeStrs.get(indexOfMax).seq); //tmpStr1 has at least one element
-		for (int i=0; i<includeStrs.size(); i++) {
-			if (i != indexOfMax) {
-				if (includeStrs.get(i).lastEst.compareToIgnoreCase(maxLastStr) == 0) {
-					tmpStr1.add(includeStrs.get(i).seq);
-				} else {
-					tmpStr2.add(includeStrs.get(i).seq);
-				}
-			}
-		}
-
-		String retStr = "";
-		int size = tmpStr1.size();
-		if (size > 2) {
-			String[] strs = new String[size];
-			for (int i=0; i<size; i++) {
-				strs[i] = tmpStr1.get(i);
-			}
-
-			// Calculate consensus base for each position, and put them into an char array
-			char[] consensus = new char[maxLen];
-			for (int i=0; i<maxLen; i++) {
-				ArrayList<Character> tmpArraylist = new ArrayList<Character>();
-				for (int j=0; j<size; j++) {
-					int index = strs[j].length() - (i+1);
-					if (index >= 0) {
-						tmpArraylist.add(strs[j].charAt(index));
-					}
-				}
-				consensus[maxLen-i-1] = getConsensusBase(tmpArraylist);
-			}
-			retStr = retStr + String.valueOf(consensus);
-		} else if ((size == 1)|| (size == 2)) {
-			retStr = retStr + tmpStr1.get(0);
-		}
-		
-		String tmpRetStr = retStr;
-		for (int i=0; i<tmpStr2.size(); i++) {
-			//retStr = retStr + "\n" + tmpStr2.get(i);
-			String tStr = tmpStr2.get(i);
-			double dis = g.d2.getLocalSimlarityScore(tmpRetStr, tStr);
-			if ((dis/tStr.length()) < 0.95) { //if tStr is not included in retStr, attach it to retStr.
-				//System.out.println(tmpRetStr);
-				//System.out.println(tStr);
-				retStr = retStr + "\n" + tStr;
 			}
 		}
 		
-		return retStr;
+		if (includeStrs.size() == 0) {
+			return "";
+		} else if (includeStrs.size() == 1) {
+			return includeStrs.get(0).seq;
+		} else if (includeStrs.size() == 2) {
+			String s1 = includeStrs.get(0).seq;
+			String s2 = includeStrs.get(1).seq;
+			if (s1.length() >= s2.length()) {
+				return s1;
+			} else {
+				return s2;
+			}
+		} else {
+			ArrayList<StartPos> input = new ArrayList<StartPos>();
+			for (int i=0; i<includeStrs.size(); i++) {
+				input.add(new StartPos(maxLen-includeStrs.get(i).lenOfFirstEst, includeStrs.get(i).seq, -1));
+			}
+			return reconstructSeq(input);
+		}
+		
 	}
 	
 	private String getCurConsensus(ArrayList<SingleBase> bases) {
@@ -901,59 +853,6 @@ public class ESTAssembly {
 			}
 		}
 		return retList;
-	}
-	
-	/*
-	 * Get the correct sequence for the last element in the input string array.
-	 * @param strs an String array which includes all the strings.
-	 * @param pos an int array which records the starting positions of all the elements in strs.
-	 * @return the consensus of the last element in strs.
-	 * 
-	 * Get the consensus according to the two input parameters, then extract the subsequence which corresponds
-	 * to the last element in strs from the consensus.
-	 */
-	private String getCorrectS1(String[] strs, int[] pos) {
-		int minPos = INT_MAX;
-		int maxPos = 0;
-		int len = strs.length;
-		for (int i=0; i<len; i++) {
-			if (pos[i] < minPos) {
-				minPos = pos[i];
-			}
-			if (pos[i] > maxPos) {
-				maxPos = pos[i];
-			}
-		}
-		
-		// Create an array which stores all the bases with the same position.
-		int lenOfArray = pos[len-1] - minPos + strs[len-1].length();
-		ArrayList<Character> [] tmpArraylists = new ArrayList [lenOfArray];
-		for (int i=0; i<lenOfArray; i++) {
-			tmpArraylists[i] = new ArrayList<Character>();
-		}
-
-		// Put all the bases into the array
-		for (int i=0; i<len; i++) {
-			int tmpSPos = pos[i] - minPos;
-			String tmpStr = strs[i];
-			for (int j=0; j<tmpStr.length(); j++) {
-				int p = tmpSPos+j;
-				if (p < lenOfArray) {
-					tmpArraylists[p].add(tmpStr.charAt(j));
-				}
-			}
-		}
-		
-		// Calculate consensus base for each position, and put them into an char array
-		char[] consensus = new char[lenOfArray];
-		for (int i=0; i<lenOfArray; i++) {
-			consensus[i] = getConsensusBase(tmpArraylists[i]);
-		}
-		
-		String retStr = String.valueOf(consensus);
-		retStr = retStr.substring(pos[len-1]-minPos);
-
-		return retStr;
 	}
 	
 	
