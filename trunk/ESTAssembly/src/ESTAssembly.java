@@ -27,6 +27,7 @@ public class ESTAssembly {
 										//It is generated in 'createAlignArray' function.
 	ArrayList<SixTuple> leftMostNodes;
 	InclusionNodes incNodes;
+	Alignment alignment;
 
 	/*
 	 * store the position of aligned nodes
@@ -58,6 +59,7 @@ public class ESTAssembly {
 		g = new Graph(props);
 		leftMostNodes = new ArrayList<SixTuple> ();
 		incNodes = new InclusionNodes();
+		alignment = new Alignment(props);
 	}
 	
 	/*
@@ -357,7 +359,7 @@ public class ESTAssembly {
 					((sp+ln-1) > (tmpSp+tmpLn-1))) {
 				//if overlap length is less than windowsize, we consider they're not overlapping.
 				//if not, we see them as overlapping,so this is not a real left end.
-				if ((tmpSp+tmpLn-sp)>=(g.d2.getWindowSize())) {
+				if ((tmpSp+tmpLn-sp)>=(g.ovl.d2.getWindowSize())) {
 					System.out.print("Node " + leftEnd + " is not a real left-most node. ");
 					System.out.println("Overlap length with node " + k + " is " + (tmpSp+tmpLn-sp)); //(sp+ln-tmpSp));
 					flag = 1;
@@ -500,8 +502,8 @@ public class ESTAssembly {
 		}
 
 		//print dGraph
-		//System.out.println("dGraph:");
-		//printDgraph(dGraph);
+		System.out.println("dGraph:");
+		printDgraph(dGraph);
 		
 		/*
 		 *  1. Print information of all the left-end nodes. It include:
@@ -653,7 +655,7 @@ public class ESTAssembly {
 			includeStrs.add(allConsensus.get(0));
 			ArrayList<Consensus> excludeStrs = new ArrayList<Consensus>();
 			for (int i=1; i<allConsensus.size(); i++) {
-				boolean b = g.d2.checkInclusion(allConsensus.get(i).firstEst, s1); //if resultArray[i].firstEst is included in s1
+				boolean b = g.ovl.checkInclusion(allConsensus.get(i).firstEst, s1); //if resultArray[i].firstEst is included in s1
 				if (b) {
 					includeStrs.add(allConsensus.get(i));
 				} else {
@@ -783,7 +785,7 @@ public class ESTAssembly {
 		int len = resultArray.size() - 1;
 		for (int i=1; i<len; i++) {
 			curSeq = resultArray.get(i).seq;
-			String[] strs = g.d2.getLocalAlignment(tConsensus, curSeq);
+			String[] strs = alignment.getLocalAlignment(tConsensus, curSeq);
 			tConsensus = tConsensus.replace(strs[0].replace("-", ""), strs[0]);
 			int offset = tConsensus.indexOf(strs[0]);
 			
@@ -864,6 +866,7 @@ public class ESTAssembly {
 		int numG = 0;
 		int numC = 0;
 		int numT = 0;
+		int numN = 0;
 		int numDash = 0;
 		
 		for (int i=0; i<lst.size(); i++) {
@@ -880,13 +883,16 @@ public class ESTAssembly {
 				case 'T':
 					numT++;
 					break;
+				case 'N':
+					numN++;
+					break;
 				case '-':
 					numDash++;
 					break;
 			}
 		}
 		
-		int max = Math.max(Math.max(Math.max(Math.max(numA, numG), numC), numT), numDash);
+		int max = Math.max(Math.max(Math.max(Math.max(Math.max(numA, numG), numC), numT), numN), numDash);
 		
 		if (max == 0) {
 			return ' ';
@@ -899,6 +905,8 @@ public class ESTAssembly {
 			return 'C';
 		} else if (numT == max){
 			return 'T';
+		} else if (numN == max){
+			return 'N';
 		} else {
 			return '-';
 		}
