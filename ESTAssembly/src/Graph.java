@@ -17,12 +17,12 @@ public class Graph {
 	private int numOfLevels;
 
 	ArrayList<Node> graphNodes;
-	D2 d2;
+	OvlDistance ovl;
 	
 	public Graph(Properties p) {
 		numOfLevels = Integer.parseInt(p.getProperty("NumOfLevels"));
 		graphNodes = new ArrayList<Node> ();
-		d2 = new D2(p);
+		ovl = new OvlDistance(p);
 	}
 	
 	public void addNode(Node s) {
@@ -135,7 +135,7 @@ public class Graph {
 				String curSeq = graphNodes.get(i).getNodeStr();
 				String comSeq = graphNodes.get(index).getNodeStr();
 				if (curSeq.length() <= comSeq.length()) {
-					if (d2.checkInclusion(curSeq, comSeq)) {
+					if (ovl.checkInclusion(curSeq, comSeq)) {
 						inc.addNode(i, index); //get rid of i and put it into inclusion list.
 						flag = false;
 						break;
@@ -180,7 +180,7 @@ public class Graph {
 				int index = v.getIndex();
 				if (inc.containInclusionNode(index)) continue; 
 				
-				int[] ovlDis = (d2).getOVLDistance(graphNodes.get(curIdx).getNodeStr(), 
+				int[] ovlDis = (ovl).getOVLDistance(graphNodes.get(curIdx).getNodeStr(), 
 												graphNodes.get(index).getNodeStr());
 				if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 					if (ovlDis[0] < 0) {
@@ -286,7 +286,7 @@ public class Graph {
 			if (inc.containInclusionNode(tmpIndex)) continue; 
 
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
-			int[] ovlDis = (d2).getOVLDistance(s1, s2);
+			int[] ovlDis = (ovl).getOVLDistance(s1, s2);
 			
 			//if (ovlDis[0] != 0) {	// there is overlap between them
 			if (ovlDis[1] != INT_MAX) {	// there is overlap between them
@@ -367,7 +367,7 @@ public class Graph {
 			} else {
 				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple, inc);
 				if (closeNode.leftNode != -1) {
-					System.out.println("findAdjacentNode for index=" + index);
+					System.out.println("findAdjacentNode for index=" + index + "; adjNode=" + closeNode.leftNode);
 					return closeNode;
 				}
 			}
@@ -436,7 +436,7 @@ public class Graph {
 			if (inc.containInclusionNode(tmpIndex)) continue; 
 
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
-			int[] ovlDis = (d2).getOVLDistance(s1, s2);
+			int[] ovlDis = (ovl).getOVLDistance(s1, s2);
 			
 			if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 				if (ovlDis[0] < 0) {
