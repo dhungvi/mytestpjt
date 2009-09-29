@@ -6,14 +6,13 @@ import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Stack;
 
-import com.mhhe.clrs2e.Prim;
 import com.mhhe.clrs2e.Vertex;
 import com.mhhe.clrs2e.WeightedAdjacencyListGraph;
 import com.mhhe.clrs2e.WeightedEdgeIterator;
 
 public class Graph {
-	protected final int INT_MAX = 2147483647;
-	protected final int INT_MIN = -2147483647;
+	protected final int INT_MAX = Integer.MAX_VALUE;
+	protected final int INT_MIN = Integer.MIN_VALUE;
 	private int numOfLevels;
 
 	ArrayList<Node> graphNodes;
@@ -167,6 +166,7 @@ public class Graph {
 		
 		for (int i=0; i<nOfNodes; i++) {
 			int curIdx = alignedNodes.get(i).curNode;
+			if (inc.containInclusionNode(curIdx)) continue;
 			int leftNode = -1;
 			int rightNode = -1;
 			int maxLeft = INT_MIN;	//maximum left distance because left distance is negative
@@ -271,7 +271,7 @@ public class Graph {
 					int tIndex = v.getIndex();
 					tmpStack.push(Integer.valueOf(tIndex));
 					
-					if (i != 0) { //Do not include parents and children because they have been processed.
+					if ((i != 0) && (tIndex != index)){ //Do not include parents and children because they have been processed.
 						allNodes.push(Integer.valueOf(tIndex));
 					}
 				}
@@ -288,8 +288,13 @@ public class Graph {
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
 			int[] ovlDis = (ovl).getOVLDistance(s1, s2);
 			
-			//if (ovlDis[0] != 0) {	// there is overlap between them
-			if (ovlDis[1] != INT_MAX) {	// there is overlap between them
+			if (ovlDis[1] == INT_MIN) {	// there is inclusion between them
+				if (s1.length() >= s2.length()) {
+					inc.addNode2(tmpIndex, index);
+				} else {
+					inc.addNode2(index, tmpIndex);
+				}
+			} else if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 				if (ovlDis[0] < 0) {
 					if (ovlDis[1] > maxLeft){
 						maxLeft = ovlDis[1];
@@ -434,11 +439,18 @@ public class Graph {
 		while (!allNodes.empty()) {
 			int tmpIndex = (Integer) allNodes.pop();
 			if (inc.containInclusionNode(tmpIndex)) continue; 
+			if (tmpIndex == index) continue;
 
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
 			int[] ovlDis = (ovl).getOVLDistance(s1, s2);
 			
-			if (ovlDis[1] != INT_MAX) {	// there is overlap between them
+			if (ovlDis[1] == INT_MIN) {	// there is inclusion between them
+				if (s1.length() >= s2.length()) {
+					inc.addNode2(tmpIndex, index);
+				} else {
+					inc.addNode2(index, tmpIndex);
+				}
+			} else if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 				if (ovlDis[0] < 0) {
 					if (ovlDis[1] > maxLeft){
 						maxLeft = ovlDis[1];
@@ -498,7 +510,7 @@ public class Graph {
 				Vertex v = (Vertex) ite.next();
 				int index2 = v.getIndex();
 				
-				if (parentIndex != index2) {
+				if (index2 != parentIndex) {
 					ret[0].push(Integer.valueOf(index2));
 					ret[1].push(Integer.valueOf(curIndex));
 				}

@@ -10,7 +10,8 @@ import java.util.Properties;
  */
 
 public class OvlDistance {
-	protected final int INT_MAX = 2147483647;
+	protected final int INT_MAX = Integer.MAX_VALUE;
+	protected final int INT_MIN = Integer.MIN_VALUE;
 	protected int windowSize;	// the size of window
 	protected int InclusionThreshold;	// use this value to define overlap distance of two inclusion subsequence.
 	// this value is used in getOVLDistance for judging inclusion(s1 includes s2, or versa).
@@ -44,15 +45,15 @@ public class OvlDistance {
 	 * Specifically, if the function finds the position, it returns three kinds of values.
 	 * 		If s2 is to the left of s1, the values(overlap length and distance) are negative integer;
 	 * 		If s2 is to the right of s1, the values(overlap length and distance) are positive integer;
-	 * 		If s2 in included in s1, the overlap distance is INT_MAX.
+	 * 		If s1 and s2 has inclusion, the overlap distance is INT_MIN.
 	 * 
 	 * @param s1 String the first string, s2 String the second string, d2Dis int d2 distance.
 	 * @return the first element is the overlap length, the second is the overlap distance.
 	 * If s2 is to the left of s1, the length are negative, the distance is zero or negative.
 	 * If s2 is to the right of s1, the length are positive, the distance is zero or positive.
 	 * If no overlap is found, the distance is INT_MAX.
-	 * If s2 is included in s1, the distance is INT_MAX.
-	 * If s1 is included in s2, the distance is INT_MAX.
+	 * If s2 is included in s1, the distance is INT_MIN.
+	 * If s1 is included in s2, the distance is INT_MIN.
 	 */
 	protected int[] getOVLDistance(String tS1, String tS2) {
 		String s1 = "";
@@ -85,7 +86,6 @@ public class OvlDistance {
 		int lLenOverlap = 0;
 		int rLenOverlap = 0;
 
-		// if all leftPos[i] are -1, disLeft will be kept to be INT_MAX.
 		for (int i=0; i<leftPos.length; i++) {
 			int lPos = leftPos[i];
 			int tLenOverlap = s2.length() - lPos; 
@@ -102,7 +102,6 @@ public class OvlDistance {
 			}
 		}
 
-		// if all rightPos[i] are -1, disRight will be kept to be INT_MAX.
 		for (int i=0; i<rightPos.length; i++) {
 			int rPos = rightPos[i];
 			int tLenOverlap = rPos + windowSize; 
@@ -140,8 +139,8 @@ public class OvlDistance {
 		if ((Math.abs(lenOverlap) == s1.length()) && 
 				(s1.length() <= s2.length()) && 
 				((disRight <= InclusionThreshold) || (Math.abs(disLeft) <= InclusionThreshold))) {
-			lenOverlap = 0;
-			ovlDis = INT_MAX;
+			lenOverlap = Math.min(s1.length(), s2.length());
+			ovlDis = INT_MIN;
 		}
 
 		returnValues[0] = lenOverlap;
@@ -230,7 +229,7 @@ public class OvlDistance {
 
 		OvlDistance ovl = new OvlDistance(props);
 		String s1 = "GCAacGCTgTGCAGGAATCTAgTACGCTTTGAGGTGCAAAACAGCCCTTCAtCGCCGGAGATGCCGCTATgGGGAGCGGAGACGCCCAGCANCCTGGGGCCGTCATATCTTGTGgNCCCATGGCCCGCTATGGAGCGGACTAaCTTNCAGATTACcAGCAGCAaGCCTGGTGCtGCgGCGGACGGCAGCaTCGGCGGCTgGGGcgATGGtGGCGaGCAAGGTCGCTgACAGTCGCTGCCAGAACCGCCAGTCATTAAGCAcCAGAAAcTATCCGCTCGTGGGaAACGcAGTGCCCCAGCAGCAGTTATcNGTGcAGCTCtCGcCACGCAGGGAGCGCCGGAtaCCAGCCCCaGCAggTACAGCTATAAATTTTCAGCAACAGAtTCTCCcTTTtGGGCTTTCTtTNaTTTGTTGCTTACCGtCTAGTCGCCGcCTGGAAGcCTGCGCTAATCGGCCTGACACCtTTGGCGCGTTGCCTCTCACTGTGCAGGCAAAGAGGcN";
-		String s2 = "aGGaAtCANTCAgTAAGCATGGCTATcGCAGGAATCTATACGCTTTNANGTgCAACAACAGCCgTTCAGtGCcaCGtAGATGCCGCTgTGGGGAGCGGAGACGCgCAGCAGCCNGGGGCCGTCATATtTgGcGCcCCgCATGGCCCCTATGGAGCTGaATACCTTACAGATTACAGCcGCATGCTCTGGTGCTGCCGCGGACtGGCAGCCaCGGCGGCTtGGGTCATGGCGGCGAcGCAAGGTCGCTGACAGTCGCTGCCAGAACCGCCAGTCATTAAGCATCAGAAATTATCatGCTCGtTGaGAAtGCAGTGCCaCAttAGCNGTTATCCGTGGAGCTCGCGgACGCANtGtGCGCCGGAGGCCAGCCCCAGCACCtACAGtTATAAATTTTtAtNtACAGATTCTCCATTTTGGGCTTTCTTTGGTTTGTTGCTTACCG";
+		String s2 = "CAcCCCTaCAgCGCCGGcGtNGCCGgTATGGGGAGCGGAGcCGCCCAGCAGCCTGGGGCCGacATATCTTGTGCCCCCATGgtCCCGCTATGGAGCgGGACACCTTACAGATTACAGCAGCATGtTCTGGTGCTGCCGCGtACGGCAGCCTCGGCGGCTGGGGTCNTGGCGGCGAGCAAGGTCGCTGACAGTCGCTGCCAGAACCGCCAGTCATTAAGCATCAGAtATTATCCGCTCGTGcGAACGCAGTGCCCCAcCaAGCaGTTATCCGTGGAGCTCGCGCACGNAGGGtAGCGCCGGAGGCCAGCCCCAGCaCCTACAGCTATAAATTTTCAGCAAaAaATTCTgCATTTTGGGCTTCTTTGGTTTGtTGCTTACCgcCTAGtCGCCgTCTGGAAGGCTGCGCTAATCGGtCTGACACCCTTGGgGCGTTGCCTCTCAtTGTGCAGGCAAAGATGGGTCGTCGCCCCGCCCcCTGCTACCGGCAGTCTAAGGGTAAGCCCTACCaGAAGTCTCaCTTCTGCCaTg";
 		int[] a = ovl.getOVLDistance(s1, s2);
 		for (int i=0; i<a.length; i++) {
 			System.out.println(a[i]);
