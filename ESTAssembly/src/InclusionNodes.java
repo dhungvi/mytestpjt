@@ -146,58 +146,60 @@ public class InclusionNodes {
 		System.out.println(a.length);
 		//System.out.println(in.containInclusionNode(3));
 	}
-}
 
-class InclusionNode implements Comparable<InclusionNode>{
-	int idxChd; //index of the node.
-	int idxP;  //index of the node which include curNode.
-	
-	InclusionNode(int c, int p) {
-		idxChd = c;
-		idxP = p;
+
+	class InclusionNode implements Comparable<InclusionNode>{
+		int idxChd; //index of the node.
+		int idxP;  //index of the node which include curNode.
+		
+		InclusionNode(int c, int p) {
+			idxChd = c;
+			idxP = p;
+		}
+		
+		public int compareTo(InclusionNode other) {
+			//Returns 0 if the argument is equal to this; 			
+			//a value less than 0 if the argument is greater than this; 
+			//and a value greater than 0 if the argument is less than this. 
+			if (this.idxChd == other.idxChd) {
+				return 0;
+			} else if (this.idxChd > other.idxChd) {
+				return 1;
+			} else {
+				return -1;
+			}
+		}
 	}
-	
-	public int compareTo(InclusionNode other) {
-		//Returns 0 if the argument is equal to this; 			
-		//a value less than 0 if the argument is greater than this; 
-		//and a value greater than 0 if the argument is less than this. 
-		if (this.idxChd == other.idxChd) {
-			return 0;
-		} else if (this.idxChd > other.idxChd) {
-			return 1;
-		} else {
-			return -1;
+
+	class PairNode { 
+		int idxP; //index of the node.
+		int idxChd;  //index of the node which is included by pNode.
+		
+		PairNode(int c, int p) {
+			idxP = p;
+			idxChd = c;
+		}
+	}
+
+	class PNode implements Comparable<PNode>{
+		int idxP;  //index of the node which include curNode.
+		
+		PNode(int p) {
+			idxP = p;
+		}
+		
+		public int compareTo(PNode other) {
+			//Returns 0 if the argument is equal to this; 			
+			//a value less than 0 if the argument is greater than this; 
+			//and a value greater than 0 if the argument is less than this. 
+			if (this.idxP == other.idxP) {
+				return 0;
+			} else if (this.idxP > other.idxP) {
+				return 1;
+			} else {
+				return -1;
+			}
 		}
 	}
 }
 
-class PairNode { 
-	int idxP; //index of the node.
-	int idxChd;  //index of the node which is included by pNode.
-	
-	PairNode(int c, int p) {
-		idxP = p;
-		idxChd = c;
-	}
-}
-
-class PNode implements Comparable<PNode>{
-	int idxP;  //index of the node which include curNode.
-	
-	PNode(int p) {
-		idxP = p;
-	}
-	
-	public int compareTo(PNode other) {
-		//Returns 0 if the argument is equal to this; 			
-		//a value less than 0 if the argument is greater than this; 
-		//and a value greater than 0 if the argument is less than this. 
-		if (this.idxP == other.idxP) {
-			return 0;
-		} else if (this.idxP > other.idxP) {
-			return 1;
-		} else {
-			return -1;
-		}
-	}
-}

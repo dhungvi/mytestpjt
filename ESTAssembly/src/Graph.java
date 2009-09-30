@@ -1,7 +1,3 @@
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Properties;
 import java.util.Stack;
@@ -17,11 +13,20 @@ public class Graph {
 
 	ArrayList<Node> graphNodes;
 	OvlDistance ovl;
+	CalculatedOvlDistance calDist;
+	WeightedAdjacencyListGraph mst;	//minimum spanning tree generated from peace
+	InclusionNodes inc;
 	
-	public Graph(Properties p) {
+	public Graph(Properties p, InclusionNodes in) {
 		numOfLevels = Integer.parseInt(p.getProperty("NumOfLevels"));
 		graphNodes = new ArrayList<Node> ();
 		ovl = new OvlDistance(p);
+		calDist = new CalculatedOvlDistance();
+		inc = in;
+	}
+	
+	public void setMst(WeightedAdjacencyListGraph m) {
+		mst = m;
 	}
 	
 	public void addNode(Node s) {
@@ -65,61 +70,8 @@ public class Graph {
 	}
 	
 
-	/*
-	 * read a minimum spanning tree from the input MST file
-	 */
-	public WeightedAdjacencyListGraph readMST(String inFileName) {
-		int nOfNodes = graphNodes.size();
-		int[][] nodes = new int[nOfNodes-1][3];	//store edges in MST, there are n-1 edges, n is number of nodes.
 
-		//read mst from the input file
-		boolean bExists = false;
-		try{ 
-			File f = (new File(inFileName));
-			bExists = f.exists();
-			if (!bExists) {
-				System.out.println("File does not exist!");
-				return null;
-			}
-
-			BufferedReader in = new BufferedReader(new FileReader(f));
-			String str = in.readLine();
-			int curIndex = 0;
-			while (str != null) {
-				str = str.trim();
-				if (str.charAt(0) != '#') {	//comment line begins from '#'
-					String[] paras = str.split(",");
-					if (Integer.parseInt(paras[0]) != -1) {	//-1 means root of MST
-						int i0 = Integer.parseInt(paras[0]);
-						int i1 = Integer.parseInt(paras[1]);
-						int i2 = Integer.parseInt(paras[2]);
-						nodes[curIndex][0] = i0;
-						nodes[curIndex][1] = i1;
-						nodes[curIndex][2] = i2;
-						curIndex++;
-					}
-				} 
-				str = in.readLine();
-			}
-			in.close();			
-		}catch(IOException e){ 
-			System.out.println(e.toString());
-			return null;
-		}
-		
-		// Make a undirected MST.
-		WeightedAdjacencyListGraph mst = 
-			new WeightedAdjacencyListGraph(nOfNodes, false);
-		for (int i=0; i<nOfNodes; i++) {	//i is the index of the node in graph
-			mst.addVertex(i, Integer.toString(i));
-		}
-		for (int j=0; j<nodes.length; j++) {
-			mst.addEdge(nodes[j][0], nodes[j][1], nodes[j][2]);
-		}
-		return mst;
-	}
-
-	private ArrayList<SixTuple> handleInclusion(WeightedAdjacencyListGraph mst, InclusionNodes inc) {
+	private ArrayList<SixTuple> handleInclusion() {
 		ArrayList<SixTuple> nodes = new ArrayList<SixTuple>();
 		int nOfNodes = mst.getCardV();
 		
@@ -130,11 +82,18 @@ public class Graph {
 				Vertex v = (Vertex) ite.next();
 				int index = v.getIndex();
 				
-				
 				String curSeq = graphNodes.get(i).getNodeStr();
 				String comSeq = graphNodes.get(index).getNodeStr();
+
+				int[] ovlDis = calDist.searchDistance(i, index);
+				if (ovlDis == null) {
+					ovlDis = (ovl).getOVLDistance(curSeq, comSeq);
+					//add to CalculatedOvlDistance
+					calDist.addDistance(i, index, ovlDis[1], ovlDis[0]);
+				}
+				
 				if (curSeq.length() <= comSeq.length()) {
-					if (ovl.checkInclusion(curSeq, comSeq)) {
+					if (ovlDis[1] == INT_MIN) { //has inclusion
 						inc.addNode(i, index); //get rid of i and put it into inclusion list.
 						flag = false;
 						break;
@@ -160,8 +119,8 @@ public class Graph {
 	 * @return an array list of SixTuple which stores two closest nodes which is to the left and to the right 
 	 * respectively for all the nodes in the tree. 
 	 */
-	public ArrayList<SixTuple> get2CloseNodesFromMST(WeightedAdjacencyListGraph mst, InclusionNodes inc) {
-		ArrayList<SixTuple> alignedNodes = handleInclusion(mst, inc);
+	public ArrayList<SixTuple> get2CloseNodesFromMST() {
+		ArrayList<SixTuple> alignedNodes = handleInclusion();
 		int nOfNodes = alignedNodes.size();
 		
 		for (int i=0; i<nOfNodes; i++) {
@@ -179,9 +138,16 @@ public class Graph {
 				Vertex v = (Vertex) ite.next();
 				int index = v.getIndex();
 				if (inc.containInclusionNode(index)) continue; 
+
+				int[] ovlDis = calDist.searchDistance(curIdx, index);
+				if (ovlDis == null) {
+
+					ovlDis = (ovl).getOVLDistance(graphNodes.get(curIdx).getNodeStr(), 
+							graphNodes.get(index).getNodeStr());
+					//add to CalculatedOvlDistance
+					calDist.addDistance(curIdx, index, ovlDis[1], ovlDis[0]);
+				}
 				
-				int[] ovlDis = (ovl).getOVLDistance(graphNodes.get(curIdx).getNodeStr(), 
-												graphNodes.get(index).getNodeStr());
 				if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 					if (ovlDis[0] < 0) {
 						if (ovlDis[1] > maxLeft){
@@ -240,7 +206,7 @@ public class Graph {
 	 * 						For the second and fifth one, if no node is found, the value is 0;
 	 * 						For the third and sixth one, if no node is found, the value is INT_MIN or INT_MAX.
 	 */
-	public SixTuple get2CloseNodesFromGrand(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple, InclusionNodes inc) {
+	public SixTuple get2CloseNodesFromGrand(int index, SixTuple sixTuple) {
 		SixTuple closeNode = new SixTuple();
 		
 		int leftNode = -1;
@@ -284,9 +250,15 @@ public class Graph {
 		while (!allNodes.isEmpty()) {
 			int tmpIndex = allNodes.pop();
 			if (inc.containInclusionNode(tmpIndex)) continue; 
-
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
-			int[] ovlDis = (ovl).getOVLDistance(s1, s2);
+
+			int[] ovlDis = calDist.searchDistance(index, tmpIndex);
+			if (ovlDis == null) {
+				ovlDis = (ovl).getOVLDistance(s1, s2);
+
+				//add to CalculatedOvlDistance
+				calDist.addDistance(index, tmpIndex, ovlDis[1], ovlDis[0]);
+			}
 			
 			if (ovlDis[1] == INT_MIN) {	// there is inclusion between them
 				if (s1.length() >= s2.length()) {
@@ -345,7 +317,7 @@ public class Graph {
 	 * @return SixTuple which stores two closest nodes which is to the left and to the right if it is not left end;
 	 * if it does, six-tuple.leftEnd = -1.
 	 */
-	public SixTuple checkLeftEndFromMST(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple, InclusionNodes inc) {
+	public SixTuple checkLeftEndFromMST(int index, SixTuple sixTuple) {
 		if (numOfLevels == 0) { //keep checking until leaves
 			numOfLevels = INT_MAX;
 		}
@@ -357,32 +329,32 @@ public class Graph {
 		nodes[1].push(Integer.valueOf(-1));
 		
 		for (int i=0; i<3; i++) { //skip over all the nodes within 3 levels
-			nodes = getNodesFromMST(mst, nodes);
+			nodes = getNodesFromMST(nodes);
 		}
 		
 		for (int foundLevel=4; foundLevel<=numOfLevels; foundLevel++) { //start from level 4
-			nodes = getNodesFromMST(mst, nodes);
+			nodes = getNodesFromMST(nodes);
 			
-			System.out.println("GetNodeFromMST for foundLevel=" + foundLevel
-					+ "; index=" + index);
-			System.out.println("\tnumber of nodes = " + nodes[0].size());
+//			System.out.println("GetNodeFromMST for foundLevel=" + foundLevel
+//					+ "; index=" + index);
+//			System.out.println("\tnumber of nodes = " + nodes[0].size());
 		
 			if (nodes[0].size() == 0) {
 				break;
 			} else {
-				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple, inc);
+				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple);
 				if (closeNode.leftNode != -1) {
-					System.out.println("findAdjacentNode for index=" + index + "; adjNode=" + closeNode.leftNode);
+//					System.out.println("findAdjacentNode for index=" + index + "; adjNode=" + closeNode.leftNode);
 					return closeNode;
 				}
 			}
 		}
 		
-		System.out.println("Fail to findAdjacentNode for index=" + index);
+//		System.out.println("Fail to find AdjacentNode for index=" + index);
 		return null;
 	}
 	
-	public SixTuple checkRightEndFromMST(WeightedAdjacencyListGraph mst, int index, SixTuple sixTuple, InclusionNodes inc) {
+	public SixTuple checkRightEndFromMST(int index, SixTuple sixTuple) {
 		if (numOfLevels == 0) { //keep checking until leaves
 			numOfLevels = INT_MAX;
 		}
@@ -394,16 +366,16 @@ public class Graph {
 		nodes[1].push(Integer.valueOf(-1));
 		
 		for (int i=0; i<3; i++) { //skip over all the nodes within 3 levels
-			nodes = getNodesFromMST(mst, nodes);
+			nodes = getNodesFromMST(nodes);
 		}
 		
 		for (int foundLevel=4; foundLevel<=numOfLevels; foundLevel++) { //start from level 4
-			nodes = getNodesFromMST(mst, nodes);
+			nodes = getNodesFromMST(nodes);
 			
 			if (nodes[0].size() == 0) {
 				break;
 			} else {
-				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple, inc);
+				SixTuple closeNode = findAdjacentNode(nodes[0], index, sixTuple);
 				if (closeNode.rightNode != -1) {
 					return closeNode;
 				}
@@ -419,7 +391,7 @@ public class Graph {
 	 * @param index The index of current node.
 	 * @sixTuple The sixTuple for the current node.
 	 */
-	private SixTuple findAdjacentNode(Stack<Integer> nodes, int index, SixTuple sixTuple, InclusionNodes inc) {
+	private SixTuple findAdjacentNode(Stack<Integer> nodes, int index, SixTuple sixTuple) {
 		Stack<Integer> allNodes = new Stack<Integer> (); //put all the values of nodes into another stack so that we won't change nodes(it's a pointer) because it may be used by the calling method.
 		for (int i=0; i<nodes.size(); i++) { //get(0) will get the bottom element of the stack
 			allNodes.push(nodes.get(i));
@@ -440,9 +412,16 @@ public class Graph {
 			int tmpIndex = (Integer) allNodes.pop();
 			if (inc.containInclusionNode(tmpIndex)) continue; 
 			if (tmpIndex == index) continue;
-
 			String s2 = graphNodes.get(tmpIndex).getNodeStr();
-			int[] ovlDis = (ovl).getOVLDistance(s1, s2);
+
+			int[] ovlDis = calDist.searchDistance(index, tmpIndex);
+			if (ovlDis == null) {
+				ovlDis = (ovl).getOVLDistance(s1, s2);
+
+				//add to CalculatedOvlDistance
+				calDist.addDistance(index, tmpIndex, ovlDis[1], ovlDis[0]);
+			}
+
 			
 			if (ovlDis[1] == INT_MIN) {	// there is inclusion between them
 				if (s1.length() >= s2.length()) {
@@ -497,7 +476,7 @@ public class Graph {
 	 * @return a stack array which stores all the found nodes' indexes. ret[0], the indexes of all the found nodes
 	 * 		(that is, the children of input nodes); ret[1], the indexes of the parent node of every element in nodes[0].
 	 */
-	private Stack<Integer>[] getNodesFromMST(WeightedAdjacencyListGraph mst, Stack<Integer>[] nodes) {
+	private Stack<Integer>[] getNodesFromMST(Stack<Integer>[] nodes) {
 		Stack<Integer>[] ret = new Stack[2];
 		ret[0] = new Stack<Integer>();
 		ret[1] = new Stack<Integer>();

@@ -76,8 +76,10 @@ public class OvlDistance {
 		int[] returnValues = new int[2];
 		
 		BestWindowMatches best = d2.matchEndWindows(s1, s2);
-		int[] leftPos = best.bestLeftStart;
-		int[] rightPos = best.bestRightStart;
+		int[] tLeftPos = best.bestLeftStart;
+		int[] tRightPos = best.bestRightStart;
+		int[] leftPos = reducePos(tLeftPos);
+		int[] rightPos = reducePos(tRightPos);
 		
 		int disLeft = INT_MAX;
 		int disRight = INT_MAX;
@@ -148,14 +150,28 @@ public class OvlDistance {
 		return returnValues;
 	}
 
+	private int[] reducePos(int[] input) {
+		int len = input.length;
+		if ((len <= 1)) {
+			return input;
+		} else{
+			int[] ret = new int[2];
+			ret[0] = input[0];
+			ret[1] = input[len-1];
+			return ret;
+		}
+	}
+	
 	/*
 	 * judge if s1 is included in s2
 	 * @return true or false
 	 */
 	protected boolean checkInclusion(String s1, String s2) {
 		BestWindowMatches best = d2.matchEndWindows(s1, s2);
-		int[] leftPos = best.bestLeftStart;
-		int[] rightPos = best.bestRightStart;
+		int[] tLeftPos = best.bestLeftStart;
+		int[] tRightPos = best.bestRightStart;
+		int[] leftPos = reducePos(tLeftPos);
+		int[] rightPos = reducePos(tRightPos);
 		int disLeft = INT_MAX;
 		int disRight = INT_MAX;
 		int lenOverlap = 0;
