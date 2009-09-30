@@ -219,7 +219,6 @@ public class D2 {
 
 }
 
-
 class BestWindowMatches {    
 	public int[] bestLeftStart;
 	public int numBestLeftWindows;
@@ -243,3 +242,6 @@ class BestWindowMatches {
 		bestRightD2 = rightD2;
 	}
 }
+
+
+
