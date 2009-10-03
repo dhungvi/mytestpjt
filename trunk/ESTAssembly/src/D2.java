@@ -12,27 +12,55 @@ import java.util.Properties;
 public class D2 {
 	protected final int INT_MAX = Integer.MAX_VALUE;
 	protected int windowSize;	// the size of window
-	protected final int wordSize; 	// the upper bound and the lower bound have the same value
 	protected int THRESHOLD;	// THRESHOLD = [(windowSize)-(boundOfWord)+1]^2
 	// if the d2 distance is bigger than the threshold, we consider it to be infinite(=INT_MAX).
-	protected int numWords;     // number of different words;
-	protected int wordFilter;
+
+
+	// d2 parameters
+	protected int d2WordSize; 	
+	protected int d2NumWords;     // number of different words;
+	protected int d2WordFilter;
+
+	// heuristic parameters
+	protected int heuristicWordSize;
+	protected int heuristicNumWords;
+	protected int heuristicWordFilter;
+	protected int u;
+	protected int uv_skip;
+	protected int t;
+	protected int tv_max;
 
 
 	public D2(Properties props) {
 		windowSize = Integer.parseInt(props.getProperty("windowSize"));
-		wordSize = Integer.parseInt(props.getProperty("boundOfWord"));
 		THRESHOLD = Integer.parseInt(props.getProperty("THRESHOLD"));
-		wordFilter = (1 << 2*wordSize) - 1;
-		numWords = 1 << 2*wordSize;
+
+		// d2 parameters
+		d2WordSize = Integer.parseInt(props.getProperty("boundOfWord"));
+		d2WordFilter = (1 << (d2WordSize << 1)) - 1; // 2^(2*d2WordSize) - 1
+		d2NumWords = 1 << (d2WordSize << 1); // 2^(2*d2WordSize)
+
+		// heuristic parameters
+		heuristicWordSize = Integer.parseInt(props.getProperty("HeuristicWordSize"));
+		heuristicWordFilter = (1 << (heuristicWordSize << 1)) - 1;
+		heuristicNumWords = 1 << (heuristicWordSize << 1);
+
+		u = Integer.parseInt(props.getProperty("u"));
+		uv_skip = Integer.parseInt(props.getProperty("uv_skip"));
+		t = Integer.parseInt(props.getProperty("t"));
+		tv_max = Integer.parseInt(props.getProperty("tv_max"));
 	}
 
 	public int getWindowSize() {
 		return windowSize;
 	}
 
-	public int getWordSize() {
-		return wordSize;
+	public int getd2WordSize() {
+		return d2WordSize;
+	}
+
+	public int getHeuristicWordSize() {
+		return heuristicWordSize;
 	}
 
 	private int encodeBase(char c) {
@@ -51,7 +79,7 @@ public class D2 {
 		return -2;
 	}
 
-	private int[] createWindowHash(String s, int leftCoord) {
+	private int[] createWindowHash(String s, int leftCoord, int windowSize, int wordSize, int wordFilter, int numWords) {
 		int[] H = new int[numWords];
 
 		int currentWordCode = 0;
@@ -75,7 +103,7 @@ public class D2 {
 
 
 	// Returns the word starting at base leftCoord o
-	private int encodeWord(String s, int leftCoord) {
+	private int encodeWord(String s, int leftCoord, int wordSize, int wordFilter) {
 		int code = 0;
 		for (int i=0; i < wordSize; i++) {
 			int c = encodeBase(s.charAt(i + leftCoord));
@@ -88,13 +116,18 @@ public class D2 {
 	}
 
 	public BestWindowMatches matchEndWindows(String s1, String s2) {
-		int[] H1_left = createWindowHash(s1, 0);
-		int[] H1_right = createWindowHash(s1, s1.length() - windowSize);
-		int[] H2 = createWindowHash(s2, 0);
+		if (!uv_tv_Heuristic(s1, s2))
+			return new BestWindowMatches(new int[1], 0, 0, new int [1], 0, 0);
+
+		//System.out.println("HERE");
+
+		int[] H1_left = createWindowHash(s1, 0, windowSize, d2WordSize, d2WordFilter, d2NumWords);
+		int[] H1_right = createWindowHash(s1, s1.length() - windowSize, windowSize, d2WordSize, d2WordFilter, d2NumWords);
+		int[] H2 = createWindowHash(s2, 0, windowSize, d2WordSize, d2WordFilter, d2NumWords);
 
 		int d2_left = 0;
 		int d2_right = 0;
-		for (int i=0; i < numWords; i++) {
+		for (int i=0; i < d2NumWords; i++) {
 			if (H1_left[i] != H2[i]) {
 				d2_left += Math.pow(H1_left[i] - H2[i], 2);
 			}
@@ -114,8 +147,8 @@ public class D2 {
 		int bestRightScore = d2_right;
 
 		for (int i=0; i < s2.length() - windowSize; i++) {
-			int firstWord = encodeWord(s2, i);
-			int lastWord = encodeWord(s2, i + windowSize - wordSize + 1);
+			int firstWord = encodeWord(s2, i, d2WordSize, d2WordFilter);
+			int lastWord = encodeWord(s2, i + windowSize - d2WordSize + 1, d2WordSize, d2WordFilter);
 
 			if (firstWord != lastWord) {
 				if (firstWord >= 0 && lastWord >= 0) {
@@ -160,7 +193,7 @@ public class D2 {
 				numBestRight = 1;
 			}
 		}
-		
+
 		if (bestLeftScore > THRESHOLD) {
 			bestLeftWindow = null;
 			numBestLeft = 0;
@@ -172,6 +205,66 @@ public class D2 {
 			bestRightScore = INT_MAX;
 		}
 		return new BestWindowMatches(bestLeftWindow, numBestLeft, bestLeftScore, bestRightWindow, numBestRight, bestRightScore);
+	}
+
+	// Hazelhusrt uv heuristic: v = object word size
+	private boolean uv_tv_Heuristic(String s1, String s2) {
+
+		// The u/v heuristic
+		// Look at every (uv_skip) word on s1 and count the number of instances on s2.
+		// Return false if the value is less than u.
+		int[] H = createWindowHash(s2, 0, s2.length(), heuristicWordSize, heuristicWordFilter, heuristicNumWords);
+		int total = 0;
+		for (int i=0; total < u && i <= s1.length() - heuristicWordSize; i += uv_skip) {
+			int code = encodeWord(s1, i, heuristicWordSize, heuristicWordFilter);
+			if (code >= 0) {
+				total += H[code];
+			}
+		}
+		if (total < u)
+			return false;
+
+		// the t/v heursitc
+		// Must find at least t words on s2 that occur within 100 bases of eachother on s1.
+		int[] arr = new int[tv_max];   // Assuming this gets initilized automatically
+		int current_position = 0;
+		int current_code = encodeWord(s1, 0, heuristicWordSize, heuristicWordFilter);
+		while (current_code < 0 && current_position <=  s1.length() - heuristicWordSize) {
+			current_position += -current_code;
+			current_code = encodeWord(s1, current_position, heuristicWordSize, heuristicWordFilter);  // Shift over past the N
+		}
+		if (current_code >= 0) {
+			total = H[current_code];
+			arr[current_position % tv_max] = total;
+		}
+		else
+			total = 0;
+
+		while (current_position < s1.length() - heuristicWordSize ) {
+			if (total >= t)
+				return true;
+
+			int next_char = encodeBase(s1.charAt(current_position+heuristicWordSize));
+			if (next_char >= 0)  {
+				current_code = ((current_code << 2) | next_char) & heuristicWordFilter;
+				current_position++;
+			}
+			else {
+				current_position += 2;
+				current_code = encodeWord(s1, current_position, heuristicWordSize, heuristicWordFilter);
+				while (current_code < 0) {
+					current_position += -current_code;
+					if (current_position > s1.length() - heuristicWordSize)
+						break;
+					current_code = encodeWord(s1, current_position, heuristicWordSize, heuristicWordFilter);
+				}
+			}
+
+			int current_index = current_position % tv_max;
+			total = total - arr[current_index] + H[current_code];
+			arr[current_index] = H[current_code];	    
+		}
+		return false;
 	}
 
 
@@ -193,16 +286,16 @@ public class D2 {
 
 		System.out.print("bestLeftStart: ");
 		for (int i = 0; i < best.numBestLeftWindows; i++)
-		    System.out.print(" " + best.bestLeftStart[i]);
+			System.out.print(" " + best.bestLeftStart[i]);
 		System.out.println("");
 		System.out.println("bestLeftD2 = " + best.bestLeftD2);
 
 		System.out.print("bestRightStart: ");
 		for (int i = 0; i < best.numBestRightWindows; i++)
-		    System.out.print(" " + best.bestRightStart[i]);
+			System.out.print(" " + best.bestRightStart[i]);
 		System.out.println("");
 		System.out.println("bestRightD2 = " + best.bestRightD2);
-}
+	}
 
 	//only used for test by main
 	protected static Properties getProperties(String fName) throws IOException {
@@ -242,6 +335,5 @@ class BestWindowMatches {
 		bestRightD2 = rightD2;
 	}
 }
-
 
 
