@@ -15,6 +15,7 @@ import com.mhhe.clrs2e.Vertex;
 import com.mhhe.clrs2e.WeightedAdjacencyListGraph;
 import com.mhhe.clrs2e.WeightedEdgeIterator;
 
+
 public class Reconstruction {
 	Graph g;
 	ArrayList<SixTuple> alignArray;
@@ -389,7 +390,10 @@ public class Reconstruction {
 		} else {
 			String s1 = includeStrs.get(idxMaxLen).seq;
 			String s2 = includeStrs.get(idxMaxNumNodes).seq;
-			String[] strs = alignment.getLocalAlignment(s1, s2);
+			//We have to use linear space alignment to avoid Java out-of-memory error.
+		    Substitution sub = new ForGene();
+		    SWSmart smart = (new SWSmart (sub, 2, s1, s2));
+		    String[] strs = smart.getMatch();
 			int offset = s1.indexOf(strs[0].replace("-", ""));
 			return (s1.substring(0, offset) + s2);
 		}
