@@ -181,7 +181,11 @@ public class ESTAssembly {
 	public static void main(String[] args) {
 		Properties props = null;
 		try {
-			props = getProperties("config.properties");
+			if (args.length > 0) {
+				props = getProperties(args[0]);
+			} else {
+				props = getProperties("config.properties");
+			}
 		} catch (IOException e) {
 			System.err.println("Get config.properties failed, " + e);
 	    	return;

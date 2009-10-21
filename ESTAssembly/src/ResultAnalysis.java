@@ -29,39 +29,50 @@ public class ResultAnalysis {
 	String oriSeq = "";
 	//String genSeq = "";
 	ArrayList<String> cap3Contigs;
-	ArrayList<String> estaContigs;
+	ArrayList<String> eastContigs;
 	ArrayList<String> cap3Singletons;
-	ArrayList<String> estaSingletons;
+	ArrayList<String> eastSingletons;
 	String cap3Time;
 	String estaTime;
-	Alignment alignment;
+	String cap3NumUsedEsts;
+	String eastNumUsedEsts;
+	//Alignment alignment;
 	
 	public ResultAnalysis(Properties props) {
-		alignment = new Alignment(props);
-		d2 = new D2(props);
-		String geneFileName = "geneFile"; //only one line which is the gene
-		ArrayList<String> tList1 = readFile(geneFileName);
+		//alignment = new Alignment(props);
+		//read the original gene file
+		ArrayList<String> tList1 = readFile(props.getProperty("GeneFileName"));
 		if (tList1 != null) {
 			oriSeq = tList1.get(0);
 		}
 
-		String fileName = "cap3.out"; //contigs from cap3
-		cap3Contigs = readFile(fileName);
+		//contigs from cap3
+		cap3Contigs = readFile(props.getProperty("Cap3Contigs"));
 
-		fileName = "cap3Singleton.out"; //sigletons from cap3
-		cap3Singletons = readFile(fileName);
+		//sigletons from cap3
+		cap3Singletons = readFile(props.getProperty("Cap3Singletons"));
 
-		fileName = "cap3.time"; //time used by cap3
-		cap3Time = readFile(fileName).get(0);
+		//time used by cap3
+		ArrayList<String> strs = readFile(props.getProperty("Cap3Time"));
+		if (strs != null)	cap3Time = strs.get(0);
+		
+		//number of ESTs that are used by cap3
+		strs = readFile(props.getProperty("Cap3NumUsedEsts"));
+		if (strs != null)	cap3NumUsedEsts = strs.get(0);
+		
+		//contigs from esta
+		eastContigs = readFile(props.getProperty("EastContigs"));
 
-		fileName = "esta.out"; //contigs from esta
-		estaContigs = readFile(fileName);
+		//sigletons from esta
+		eastSingletons = readFile(props.getProperty("EastSingletons"));
 
-		fileName = "estaSingleton.out"; //sigletons from esta
-		estaSingletons = readFile(fileName);
+		//time used by esta
+		strs = readFile(props.getProperty("EastTime"));
+		if (strs != null)	estaTime = strs.get(0);
 
-		fileName = "esta.time"; //time used by esta
-		estaTime = readFile(fileName).get(0);
+		//number of ESTs that are used by east
+		strs = readFile(props.getProperty("EastNumUsedEsts"));
+		if (strs != null)	eastNumUsedEsts = strs.get(0);
 	}
 
 	/*
@@ -107,62 +118,79 @@ public class ResultAnalysis {
 	 */
 	public void analysis() {
 		int c[] = new int[13];
-		c[1] = cap3Contigs.size();
-		c[2] = estaContigs.size();
-		if (cap3Singletons == null) {
-			c[3] = 0;
-		} else {
+		if (cap3Contigs != null) {
+			c[1] = cap3Contigs.size();
+
+			//get the longest contig in cap3
+			String lStr = "";
+			int len = 0;
+			for (int i=0; i<c[1]; i++) {
+				String tStr = cap3Contigs.get(i);
+				int tLen = tStr.length();
+				if (tLen > len) {
+					len = tLen;
+					lStr = tStr;
+				}
+			}
+			c[5] = len;
+			//c[9] = getDiff(lStr);
+			c[7] = getAScore(lStr, oriSeq);
+		}
+		
+		if (eastContigs != null) {
+			c[2] = eastContigs.size();
+
+			//get the longest contig in esta
+			String lStr = "";
+			int len = 0;
+			for (int i=0; i<c[2]; i++) {
+				String tStr = eastContigs.get(i);
+				int tLen = tStr.length();
+				if (tLen > len) {
+					len = tLen;
+					lStr = tStr;
+				}
+			}
+			c[6] = len;
+			//c[10] = getDiff(lStr);
+			c[8] = getAScore(lStr, oriSeq);
+		}
+		
+		if (cap3Singletons != null) {
 			c[3] = cap3Singletons.size();
 		}
-		if (estaSingletons == null) {
-			c[4] = 0;
-		} else {
-			c[4] = estaSingletons.size();
+		if (eastSingletons != null) {
+			c[4] = eastSingletons.size();
 		}
 		
-		//get the longest contig in cap3
-		String lStr = "";
-		int len = 0;
-		for (int i=0; i<c[1]; i++) {
-			String tStr = cap3Contigs.get(i);
-			int tLen = tStr.length();
-			if (tLen > len) {
-				len = tLen;
-				lStr = tStr;
-			}
+		if (cap3Time != null) {
+			c[9] = Integer.valueOf(cap3Time).intValue();
 		}
-		c[5] = len;
-		//c[9] = getDiff(lStr);
-		c[7] = getAScore(lStr, oriSeq);
-		c[11] = Integer.valueOf(cap3Time).intValue();
 		
-		//get the longest contig in esta
-		lStr = "";
-		len = 0;
-		for (int i=0; i<c[2]; i++) {
-			String tStr = estaContigs.get(i);
-			int tLen = tStr.length();
-			if (tLen > len) {
-				len = tLen;
-				lStr = tStr;
-			}
+		if (estaTime != null) {
+			c[10] = Integer.valueOf(estaTime).intValue();
 		}
-		c[6] = len;
-		//c[10] = getDiff(lStr);
-		c[8] = getAScore(lStr, oriSeq);
-		c[12] = Integer.valueOf(estaTime).intValue();
+		
+		if (cap3NumUsedEsts != null) {
+			c[11] = Integer.valueOf(cap3NumUsedEsts).intValue();
+		}
+		
+		if (eastNumUsedEsts != null) {
+			c[12] = Integer.valueOf(eastNumUsedEsts).intValue();
+		}
 		
 		/*
 		 * write c1-c10 into the output file "analysis.out" in fasta format.
 		 */
 		try{ 
-			File outFile = new File("analysis.out");
+			File outFile = new File("OutputFile");
 			boolean bExists = outFile.exists();
 			if (bExists) {
 				outFile.delete();
 			}
 			BufferedWriter out = new BufferedWriter(new FileWriter(outFile, true));
-			out.write(">cap3 vs. esta\n");
+			out.write(">CAP3 vs. EAST\n");
+			out.write(">Cap3NumContigs  EastNumContigs  Cap3NumSing  EastNumSin  Cap3Len  EastLen  Cap3AScore  EastAScore  Cap3Time  EastTime  Cap3NumUsedEsts  EastNumUsedEsts\n");
 			for (int i=1; i<c.length; i++) {
 				out.write(String.valueOf(c[i]));
 				out.write("\t");
@@ -235,7 +263,7 @@ public class ResultAnalysis {
 	 * 
 	 * @return number of difference
 	 */
-	public int getDiff(String genSeq) {
+/*	public int getDiff(String genSeq) {
 		//we will compare the consensus from startPoss[0] of the original sequence to the generated sequence 
 		// starting from startPos[1].
 		int[] startPoss = getStartCompPos(genSeq);
@@ -258,12 +286,12 @@ public class ResultAnalysis {
 		
 		return num;
 	}
-	
+*/	
 	/*
 	 * Get starting position in the original gene where we start comparison between 
 	 * the original and the calculated sequence.
 	 */
-	private int[] getStartCompPos(String genSeq) {
+/*	private int[] getStartCompPos(String genSeq) {
 		int ret[] = new int[2];
 		String parts[] = alignment.getLocalAlignment(oriSeq, genSeq);
 		ret[0] = oriSeq.indexOf(parts[0].replace("-", ""));
@@ -272,15 +300,22 @@ public class ResultAnalysis {
 		return ret;
 		
 	}
+*/	
+	
+	
 	/**
 	 * @param args
 	 */
 	public static void main(String[] args) {
 		Properties props = null;
 		try {
-			props = getProperties("config.properties");
+			if (args.length > 0) {
+				props = getProperties(args[0]);
+			} else {
+				props = getProperties("analysis.properties");
+			}
 		} catch (IOException e) {
-			System.err.println("Get config.properties failed, " + e);
+			System.err.println("Get analysis.properties failed, " + e);
 	    	return;
 		}
 		
