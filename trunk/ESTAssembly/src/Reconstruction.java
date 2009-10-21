@@ -28,11 +28,11 @@ public class Reconstruction {
 	ArrayList<SixTuple> leftMostNodes;
 	String consensusFileName;
 	String singletonFileName;
+	String numOfUsedESTsFileName;
 	String printStr;
-	ArrayList<String> allConsensus;	//store all the generated sequences
 	ArrayList<String> numOfNodes;	//store number of used nodes, corresponds to each element in allConsensus.
-	ArrayList<String> allSingletons;	//store all the singletons.
 	ArrayList<String> firstEsts;	//includes all the left end sequence corresponding to each element in allConsensus.
+	int[] usedNodes;	//index of the array is the index of the node, 1-used, 0-not used. It is used to identify singletons.
 	
 	public Reconstruction(Properties props, Graph graph, ArrayList<SixTuple> align, ArrayList<SixTuple> leftEnds, InclusionNodes inc) {
 		g = graph;
@@ -43,14 +43,14 @@ public class Reconstruction {
 		leftMostNodes = leftEnds;
 		consensusFileName = props.getProperty("ConsensusFile");
 		singletonFileName = props.getProperty("SingletonFile");
+		numOfUsedESTsFileName = props.getProperty("NumOfUsedESTs");
 		alignment = new Alignment(props);
 		
 		printStr = "";
-		allConsensus= new ArrayList<String> ();	
 		numOfNodes = new ArrayList<String> ();	
-		allSingletons= new ArrayList<String> ();	
 		firstEsts = new ArrayList<String> ();
-
+		
+		usedNodes = new int[g.graphNodes.size()];
 	}
 	
 	public void getConsensus() {
@@ -79,8 +79,7 @@ public class Reconstruction {
 				outFile1.delete();
 			}
 			BufferedWriter out1 = new BufferedWriter(new FileWriter(outFile1, true));
-			ArrayList<String>[] results = this.reconstruct();
-			ArrayList<String> consensus = results[0];
+			ArrayList<String> consensus = this.reconstruct();
 			int index = 1;
 			for (int i=0; i<consensus.size(); i++) {
 				String str = consensus.get(i);
@@ -101,7 +100,7 @@ public class Reconstruction {
 			out1.close();
 			
 			/*
-			 * print the singletons
+			 * print singletons and numOfUsedESTs
 			 */
 			File outFile2 = new File(singletonFileName);
 			bExists = outFile2.exists();
@@ -109,13 +108,28 @@ public class Reconstruction {
 				outFile2.delete();
 			}
 			BufferedWriter out2 = new BufferedWriter(new FileWriter(outFile2, true));
-			ArrayList<String> singletons = results[1];
-			for (int i=0; i<singletons.size(); i++) {
-				out2.write(singletons.get(i));
-				out2.write("\n");
+			int num = 0;
+			for (int i=0; i<usedNodes.length; i++) {
+				if (usedNodes[i] == 0) {	//singleton
+					out2.write(g.getCommentOfNode(i) + "\n");
+					out2.write(g.getSeqOfNode(i) + "\n");
+				} else {
+					num++;
+				}
 			}
 			out2.flush();
 			out2.close();
+			
+			File outFile3 = new File(numOfUsedESTsFileName);
+			bExists = outFile3.exists();
+			if (bExists) {
+				outFile3.delete();
+			}
+			BufferedWriter out3 = new BufferedWriter(new FileWriter(outFile3, true));
+			out3.write(">number of used ESTs by EAST\n");
+			out3.write(Integer.toString(num));
+			out3.flush();
+			out3.close();
 		}catch(IOException e){ 
 			System.out.println(e.toString());
 		} 
@@ -124,43 +138,24 @@ public class Reconstruction {
 	/*
 	 * reconstruct the sequence
 	 * 
-	 * 1. Generate dGraph. 
-	 * 2. For each left-end node, starting from it to calculate positions for each node. 
-	 * In order to get starting positions, it constructs a MST. The weight of the Minimum Spanning tree is 
-	 * the overlap distance instead of overlap length. 
-	 * Then reconstruct the sequence from the set of ESTs.
-	 * 
-	 * @return two arraylist: The assembled sequences, the singletons.
+	 * @return an arraylist: The assembled sequences.
 	 */
-	private ArrayList<String>[] reconstruct() {
-		int[][]dGraph = genDGraph();
-		
+	private ArrayList<String> reconstruct() {
 		sPosDebug = new int[g.graphNodes.size()];	
-		for (int i=0; i<leftMostNodes.size(); i++) { //start for
-			genConsensusFromOneLeftEnd(leftMostNodes.get(i).curNode, dGraph);
-		} //end for
 		
-		//if there are more than one consensus, process them.
-		int tmpSize = allConsensus.size();
-		if (tmpSize > 1) { 
-			ArrayList<String> s = processMoreConsensus();
-			allConsensus = s;
-			
-			//for debug
-			printStr = printStr + "The consensus from above " + tmpSize + " sequences:\n";
-			for (int p=0; p<s.size(); p++) {
-				printStr = printStr + s.get(p) + "\n";
-			}
+		ArrayList<String> ret = processLeftEnds();
+
+		//for debug
+		printStr = printStr + "The consensus from above " + leftMostNodes.size() + " left ends:\n";
+		for (int p=0; p<ret.size(); p++) {
+			printStr = printStr + ret.get(p) + "\n";
 		}
 		
 		//print debug information about the generated consensus.
 		System.out.println("*********************consensus:********************");
 		System.out.println(printStr);
 		
-		ArrayList<String>[] rets = new ArrayList[2];
-		rets[0] = allConsensus;
-		rets[1] = allSingletons;
-		return rets;
+		return ret;
 	}
 	
 	private int[][] genDGraph() {
@@ -210,20 +205,24 @@ public class Reconstruction {
 
 
 	/*
-	 *  1. Print information of the left-end node. It include:
-	 *  	starting position of the node;
-	 * 		whether or not they are real left ends;
-	 * 		If they are false left ends, print the overlap length they have with other nodes.
-	 *  2. For the left-end node, starting from it to calculate positions for each node.
+	 *  If flag = 0, return number of used nodes for this left end.
+	 *  If flag = 1, return consensus from this left end.
+	 *  
+	 * 1. Generate dGraph. 
+	 * 2. For each left-end node, starting from it to calculate positions for each node. 
+	 * In order to get starting positions, it constructs a MST. The weight of the Minimum Spanning tree is 
+	 * the overlap distance instead of overlap length. 
+	 * Then reconstruct the sequence from the set of ESTs.
+	 * 
 	 *  	Because the Prim algorithm starts from index 0 to generate MST, we have to
 	 *  		put left-end node to index 0 in order to get the MST we want. If Prim does 
 	 *  		not start from the left-end node, the directed tree will be unconnected.
-
+	 *  
 	 */
-	private void genConsensusFromOneLeftEnd(int leftEnd, int[][] dGraph) {
+	private String getInfoOfLeftEnd(int leftEnd, int[][] dGraph, int flag) {
+		String ret = "";
 		sPos = new int[g.graphNodes.size()];	//store starting positions of all the nodes
 
-		//Debugger.printLeftEndInfo(leftEnd, g);
 		
 		// Calculate starting positions using minimum spanning tree starting from this left-end node.
 		for (int t=0; t<dGraph.length; t++) {
@@ -244,22 +243,21 @@ public class Reconstruction {
 
 		//put leftEnd node to index 0 in array sPos to be consistent with dGraph and primMST
 		sPos[leftEnd] = sPos[0];
-			sPosDebug[leftEnd] = sPosDebug[0];
+			//sPosDebug[leftEnd] = sPosDebug[0];
 		sPos[0] = 0; //starting position of the left end is assigned to be 0.
-			sPosDebug[0] = Integer.parseInt(g.getNameOfNode(leftEnd));
+			//sPosDebug[0] = Integer.parseInt(g.getNameOfNode(leftEnd));
 		//get starting positions for the nodes in primMST
 		getStartPos(0, leftEnd, primMST, dGraph);
-			getStartPosDebug(0, leftEnd, primMST, dGraph);
+			//getStartPosDebug(0, leftEnd, primMST, dGraph);
 		//exchange sPos[0] and sPos[leftEnd] to recover index 0 in sPos
 		int tmp = sPos[0];
 			int tmp1 = sPosDebug[0];
 		sPos[0] = sPos[leftEnd];
-			sPosDebug[0] = sPosDebug[leftEnd];
+			//sPosDebug[0] = sPosDebug[leftEnd];
 		sPos[leftEnd] = tmp;
-			sPosDebug[leftEnd] = tmp1;
+			//sPosDebug[leftEnd] = tmp1;
 
 		
-		//reconstruct this sequence 
 		//sort the array sPos (in ascending order)
 		ArrayList<StartPos> tmpArray = new ArrayList<StartPos> ();
 		for (int j=0; j<sPos.length; j++) {
@@ -268,18 +266,17 @@ public class Reconstruction {
 			}
 		}
 
-		if (tmpArray.size() == 1) { //singleton
-			allSingletons.add(g.getCommentOfNode(leftEnd) + "\n" + g.getSeqOfNode(leftEnd));
-			return;
-		} 
 		
-		firstEsts.add(g.getSeqOfNode(leftEnd));
-
-		String[] tStr = reconstructSeq(tmpArray);
-		allConsensus.add(tStr[0]);
-		numOfNodes.add(tStr[1]);
-		printStr = printStr + tStr[0] + "\n";
-
+		if (flag == 0) { //get number of used nodes
+			int num = getNumUsedNodes(tmpArray);
+			ret = String.valueOf(num);
+		} else if (flag == 1) { //get consensus
+			printStr = printStr + Debugger.printLeftEndInfo(leftEnd, g); //get information of this left end which is used to start reconstruction.
+			String[] tStr = reconstructSeq(tmpArray);
+			printStr = printStr + String.valueOf(tStr[1]) + " nodes are used to reconstruct the sequence.\n";
+			printStr = printStr + tStr[0] + "\n\n";
+			ret = tStr[0]; 
+		}
 		
 		//re-exchange index of node 0 and the left-end node to recover dGraph to its original values. 
 		for (int t=0; t<dGraph.length; t++) {
@@ -294,111 +291,136 @@ public class Reconstruction {
 				dGraph[t][1] = 0;
 			}
 		}
+		return ret;
 	}
 	
 	
 	 /* 
-	 * This method is used when there are more than one consensus in the assembly.
-	 * Then number of consensus is equal to the number of left ends. And the different consensus does not mean that they are 
-	 * not overlapped(or they correspond to different part of the gene). Some left ends may include each other, and consensus 
-	 * from them overlap with each other.
-	 * This method is designed to remove all the dependent consensus and extract all the independent ones, which means, we intend 
-	 * to find all the consensus which represent different part of the gene.
-	 * 
-	 * 			allConsensus an arraylist which includes all the generated consensus from the calling method;
-	 * 		 	firstEsts an arraylist which includes all the left end sequence corresponding to all the consensus;
-	 * 			numOfNodes an arraylist which stores the number of used nodes for each consensus.
-	 * @return the combined consensus.
+	 * This method is designed to group left ends into independent sets. All the dependent left ends (include one by one) are put 
+	 * into one group. 
+	 * In each group, we find the left end with the longest length and the one which will use the most number of ESTs to reconstruct,
+	 * and combine them together to form a consensus by calling the function "processLeftEndsWithInclusion". 
+
+	 * @return all the consensus sequences.
 	 */
-	 private ArrayList<String> processMoreConsensus() {
-		//String retStr = "";
+	 private ArrayList<String> processLeftEnds() {
 		ArrayList<String> allOutputContigs= new ArrayList<String> ();	//store all the generated sequences
 		
-		int sizeOfs = allConsensus.size();
-		Consensus[] resultArray = new Consensus[sizeOfs]; //store the starting positions of ests
-		for (int i=0; i<sizeOfs; i++) {
-			resultArray[i] = new Consensus(Integer.parseInt(numOfNodes.get(i)), allConsensus.get(i), firstEsts.get(i));
-		}
+		int[][]dGraph = genDGraph();
+		int sizeOfs = leftMostNodes.size();
+		LeftEnd[] resultArray = new LeftEnd[sizeOfs]; //store the starting positions of ests
+		for (int i=0; i<sizeOfs; i++) { //start for
+			int idx = leftMostNodes.get(i).curNode;
+			//String s = Debugger.printLeftEndInfo(idx, g);  //print the information of all the assumed left ends.
+			String num = getInfoOfLeftEnd(idx, dGraph, 0);
+			resultArray[i] = new LeftEnd(idx, Integer.parseInt(num), g.getSeqOfNode(idx));
+		} //end for
+
 		MergeSort merge = new MergeSort();
 		merge.sort(resultArray);
 		
-		ArrayList<Consensus> allConsensus = new ArrayList<Consensus> ();
+		ArrayList<LeftEnd> allLeftEnds = new ArrayList<LeftEnd> ();
 		for (int i=sizeOfs-1; i>=0; i--) {
-			allConsensus.add(resultArray[i]);
+			allLeftEnds.add(resultArray[i]);
 		}
 		
 		while (true) {
-			String s1 = allConsensus.get(0).firstEst;
-			ArrayList<Consensus> includeStrs = new ArrayList<Consensus>();
-			includeStrs.add(allConsensus.get(0));
-			ArrayList<Consensus> excludeStrs = new ArrayList<Consensus>();
-			for (int i=1; i<allConsensus.size(); i++) {
-				boolean b = g.ovl.checkInclusion(allConsensus.get(i).firstEst, s1); //if resultArray[i].firstEst is included in s1
+			String s1 = allLeftEnds.get(0).seq;
+			ArrayList<LeftEnd> includedEnds = new ArrayList<LeftEnd>();
+			includedEnds.add(allLeftEnds.get(0));
+			ArrayList<LeftEnd> excludedEnds = new ArrayList<LeftEnd>();
+			for (int i=1; i<allLeftEnds.size(); i++) {
+				boolean b = g.ovl.checkInclusion(allLeftEnds.get(i).seq, s1); //if resultArray[i].firstEst is included in s1
 				if (b) {
-					includeStrs.add(allConsensus.get(i));
+					includedEnds.add(allLeftEnds.get(i));
 				} else {
-					excludeStrs.add(allConsensus.get(i));
+					excludedEnds.add(allLeftEnds.get(i));
 				}
 			}
 
-			allOutputContigs.add(processMoreConsensusWithInclusion(includeStrs));
-			if (excludeStrs.size() == 0) {
+			allOutputContigs.add(processLeftEndsWithInclusion(includedEnds));
+			if (excludedEnds.size() == 0) {
 				break;
 			} else {
-				allConsensus = excludeStrs;
+				allLeftEnds = excludedEnds;
 			}
 		}
-
-
 		return allOutputContigs;
 	 }
 	 
 
 
 	/*
-	 * This method is called by "processMoreConsensus".
-	 * This method is used to process those consensus which starts from the left ends that include each other.
-	 * These input consensus originate from more than one left ends which include each other. 
+	 * This method is called by "processLeftEnds".
+	 * This method is used to process those left ends that include each other.
 	 * 
-	 * Here we combine all the consensus into one.
 	 * We combine the one with the longest first EST and the one using the most number of ESTs together to 
 	 * form a new one and return it.
 	 */
-	private String processMoreConsensusWithInclusion(ArrayList<Consensus> includeStrs) {
-		int maxLen = 0; //the maximal length of the first EST.
-		int idxMaxLen = 0;
-		int maxNumNodes = 0;
-		int idxMaxNumNodes = 0;
-		for (int i=0; i<includeStrs.size(); i++) {
-			int tLen = includeStrs.get(i).lenOfFirstEst;
-			if (tLen > maxLen) {
-				maxLen = tLen;
-				idxMaxLen = i;
-			}
-			
-			int num = includeStrs.get(i).numOfUsedNodes;
-			if (num > maxNumNodes) {
-				maxNumNodes = num;
-				idxMaxNumNodes = i;
-			}
+	 private String processLeftEndsWithInclusion(ArrayList<LeftEnd> includeStrs) {
+		 if (includeStrs.size() == 0) {
+			 return "";
+		 } else if (includeStrs.size() == 1) {
+			 int[][]dGraph = genDGraph();
+			 String s = getInfoOfLeftEnd(includeStrs.get(0).index, dGraph, 1);
+			 return s;
+		 } else {
+			 int maxLen = 0; //the maximal length of the first EST.
+			 int idxMaxLen = 0;
+			 int maxNumNodes = 0;
+			 int idxMaxNumNodes = 0;
+			 
+			 for (int i=0; i<includeStrs.size(); i++) {
+				 int tLen = includeStrs.get(i).lenOfSeq;
+				 if (tLen > maxLen) {
+					 maxLen = tLen;
+					 idxMaxLen = i;
+				 }
+
+				 int num = includeStrs.get(i).numOfUsedNodes;
+				 if (num > maxNumNodes) {
+					 maxNumNodes = num;
+					 idxMaxNumNodes = i;
+				 }
+			 }
+
+			 String s1 = includeStrs.get(idxMaxLen).seq;
+			 int[][]dGraph = genDGraph();
+			 String s2 = getInfoOfLeftEnd(includeStrs.get(idxMaxNumNodes).index, dGraph, 1);
+
+			 //We have to use linear space alignment to avoid Java out-of-memory error.
+			 Substitution sub = new ForGene();
+			 SWSmart smart = (new SWSmart (sub, 2, s1, s2));
+			 String[] strs = smart.getMatch();
+			 int offset = s1.indexOf(strs[0].replace("-", ""));
+			 return (s1.substring(0, offset) + s2);
+		 }
+	 }
+
+	/*
+	 * get the number of used nodes when making a consensus. It has the same value as ret[1] from "reconstructSeq".
+	 */
+	private int getNumUsedNodes(ArrayList<StartPos> a) {
+		int ret = 0;
+		int sizeOfa = a.size();
+		if (sizeOfa == 0) {
+			return 0;
+		} else if (sizeOfa == 1) {
+			return 1;
 		}
+
+		StartPos[] tmpResultArray = new StartPos[sizeOfa]; //store the starting positions of ests
+		for (int i=0; i<sizeOfa; i++) {
+			tmpResultArray[i] = a.get(i);
+		}
+		MergeSort merge = new MergeSort();
+		merge.sort(tmpResultArray);
+
+		TreeSet<UsedNode> addedNodes = addInclusionNodes(tmpResultArray);  //add all those related inclusion nodes into it for reconstruction.
+		ret = addedNodes.size();
 		
-		if (includeStrs.size() == 0) {
-			return "";
-		} else if (includeStrs.size() == 1) {
-			return includeStrs.get(0).seq;
-		} else {
-			String s1 = includeStrs.get(idxMaxLen).seq;
-			String s2 = includeStrs.get(idxMaxNumNodes).seq;
-			//We have to use linear space alignment to avoid Java out-of-memory error.
-		    Substitution sub = new ForGene();
-		    SWSmart smart = (new SWSmart (sub, 2, s1, s2));
-		    String[] strs = smart.getMatch();
-			int offset = s1.indexOf(strs[0].replace("-", ""));
-			return (s1.substring(0, offset) + s2);
-		}
+		return ret;
 	}
-	
 	/*
 	 * reconstruct a sequence which starts from a left end.
 	 * return: ret[0]-the consensus, ret[1]-the number of nodes used for reconstruction.
@@ -411,18 +433,19 @@ public class Reconstruction {
 		} else if (sizeOfa == 1) {
 			 ret[0] = g.getSeqOfNode(a.get(0).index);
 			 ret[1] = Integer.toString(1);
+			 usedNodes[a.get(0).index] = 1;	//mark that the node is used.
 			 return ret;
 		}
 		
 		StartPos[] tmpResultArray = new StartPos[sizeOfa]; //store the starting positions of ests
 		for (int i=0; i<sizeOfa; i++) {
 			tmpResultArray[i] = a.get(i);
+			usedNodes[a.get(i).index] = 1;	//mark that the node is used.
 		}
 		MergeSort merge = new MergeSort();
 		merge.sort(tmpResultArray);
 		
 		TreeSet<UsedNode> addedNodes = addInclusionNodes(tmpResultArray);  //add all those related inclusion nodes into it for reconstruction.
-		System.out.println(addedNodes.size() + " nodes are used to reconstruct the sequence.\n");
 		ret[1] = Integer.toString(addedNodes.size());
 
 		StartPos[] resultArray = new StartPos[addedNodes.size()]; 
@@ -513,11 +536,13 @@ public class Reconstruction {
 			int curIdx = input[i].index;
 			int pos = input[i].pos;
 			retList.add(new UsedNode(curIdx, pos));
+			usedNodes[curIdx] = 1;	//mark that the node is used.
 			
 			int[] chdIdx = incNodes.containPNode(curIdx, g.graphNodes.size()); //inclusion children index of the curIdx if exist.
 			if (chdIdx != null) {
 				for (int j=0; j<chdIdx.length; j++) {
 					retList.add(new UsedNode(chdIdx[j], pos+1));
+					usedNodes[chdIdx[j]] = 1;	//mark that the node is used.
 				}
 			}
 		}
@@ -654,25 +679,25 @@ public class Reconstruction {
 		}
 	}	
 
-	class Consensus implements Comparable<Consensus> {
-		 int lenOfFirstEst;
+	class LeftEnd implements Comparable<LeftEnd> {
+		 int index;
+		 int lenOfSeq;
 		 int numOfUsedNodes;
 		 String seq;
-		 String firstEst;
-		 public Consensus(int n, String s1, String s2) {
-			 lenOfFirstEst = s2.length();
+		 public LeftEnd(int idx, int n, String s) {
+			 index = idx;
+			 lenOfSeq = s.length();
 			 numOfUsedNodes = n;
-			 seq = s1;
-			 firstEst = s2;
+			 seq = s;
 		 }
 
-		 public int compareTo(Consensus other) {
+		 public int compareTo(LeftEnd other) {
 			 //Returns 0 if the argument is equal to this; 			
 			 //a value less than 0 if the argument is greater than this; 
 			 //and a value greater than 0 if the argument is less than this. 
-			 if (this.lenOfFirstEst == other.lenOfFirstEst) {
+			 if (this.lenOfSeq == other.lenOfSeq) {
 				 return 0;
-			 } else if (this.lenOfFirstEst > other.lenOfFirstEst) {
+			 } else if (this.lenOfSeq > other.lenOfSeq) {
 				 return 1;
 			 } else {
 				 return -1;

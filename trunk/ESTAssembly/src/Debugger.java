@@ -18,9 +18,10 @@ public class Debugger {
 	 * 		whether or not they are real left ends;
 	 * 		If they are false left ends, print the overlap length they have with other nodes.
 	 */
-	static void printLeftEndInfo(int leftEnd, Graph g) {
+	static String printLeftEndInfo(int leftEnd, Graph g) {
+		String ret = "";
 		int sp = Integer.parseInt(g.getNameOfNode(leftEnd));	//actual starting position of the node
-		System.out.println("Node " + leftEnd + " starts from " + sp);
+		ret = "Node " + leftEnd + " starts from " + sp + "\n";
 		int ln = g.getLenOfNode(leftEnd);
 		int flag = 0;
 		for (int k=0; k<g.getSizeofGraph(); k++) {
@@ -32,19 +33,17 @@ public class Debugger {
 				//if overlap length is less than windowsize, we consider they're not overlapping.
 				//if not, we see them as overlapping,so this is not a real left end.
 				if ((tmpSp+tmpLn-sp)>=(g.ovl.d2.getWindowSize())) {
-					System.out.print("Node " + leftEnd + " is not a real left-most node. ");
-					System.out.println("Overlap length with node " + k + " is " + (tmpSp+tmpLn-sp)); //(sp+ln-tmpSp));
+					ret = ret + "Node " + leftEnd + " is not a real left-most node. ";
+					ret = ret + "Overlap length with node " + k + " is " + (tmpSp+tmpLn-sp) + "\n"; //(sp+ln-tmpSp));
 					flag = 1;
 				}
 			}
 		}
 		
 		if (flag == 0) {
-			System.out.println("Node " + leftEnd + " is a real left-most node.");
-		} else {
-			System.out.println();
-		}
-
+			ret = ret + "Node " + leftEnd + " is a real left-most node.\n";
+		} 
+		return ret;
 	}
 	
 	/* 
