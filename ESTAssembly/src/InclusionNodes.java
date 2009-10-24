@@ -132,6 +132,25 @@ public class InclusionNodes {
 		}
 	}
 	
+	//return the indices of all the children nodes in nodes and nodes2
+	public int[] getAllChdNodes() {
+		int size = nodes.size() + nodes2.size();
+		int[] ret = new int[size];
+		int i=0;
+		
+		Iterator<InclusionNode> ite = nodes.iterator();
+		while (ite.hasNext()) {
+			InclusionNode n1 = ite.next();
+			ret[i++] = n1.idxChd;
+		}
+		Iterator<PairNode> ite2 = nodes2.iterator();
+		while (ite2.hasNext()) {
+			PairNode n1 = ite2.next();
+			ret[i++] = n1.idxChd;
+		}
+		return ret;
+	}
+	
 	public static void main(String args[]) {
 		InclusionNodes in = new InclusionNodes();
 		in.addNode(4,3);
