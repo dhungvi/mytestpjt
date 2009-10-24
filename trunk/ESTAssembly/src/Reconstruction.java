@@ -51,6 +51,11 @@ public class Reconstruction {
 		firstEsts = new ArrayList<String> ();
 		
 		usedNodes = new int[g.graphNodes.size()];
+		
+		int[] chdNodes = incNodes.getAllChdNodes(); //all the children nodes in inclusion list should not be considered as singletons.
+		for (int i=0; i<chdNodes.length; i++) {
+			usedNodes[chdNodes[i]] = 1;
+		}
 	}
 	
 	public void getConsensus() {
@@ -146,7 +151,7 @@ public class Reconstruction {
 		ArrayList<String> ret = processLeftEnds();
 
 		//for debug
-		printStr = printStr + "The consensus from above " + leftMostNodes.size() + " left ends:\n";
+		printStr = printStr + ret.size() + " consensus from above " + leftMostNodes.size() + " left ends:\n";
 		for (int p=0; p<ret.size(); p++) {
 			printStr = printStr + ret.get(p) + "\n";
 		}
@@ -273,7 +278,9 @@ public class Reconstruction {
 		} else if (flag == 1) { //get consensus
 			printStr = printStr + Debugger.printLeftEndInfo(leftEnd, g); //get information of this left end which is used to start reconstruction.
 			String[] tStr = reconstructSeq(tmpArray);
-			printStr = printStr + String.valueOf(tStr[1]) + " nodes are used to reconstruct the sequence.\n";
+			//this is an estimated value, not an exact one because some nodes may repeat (both from nodes2 in inclusion list and also exist in the ordinary list)
+			//the value in numOfUsedEsts file is an exact value.
+			printStr = printStr + String.valueOf(tStr[1]) + " nodes are used to reconstruct the sequence.(estimated. real number<= the number)\n";
 			printStr = printStr + tStr[0] + "\n\n";
 			ret = tStr[0]; 
 		}
@@ -385,6 +392,7 @@ public class Reconstruction {
 			 }
 
 			 String s1 = includeStrs.get(idxMaxLen).seq;
+			 usedNodes[includeStrs.get(idxMaxLen).index] = 1;	//mark that the node is used.
 			 int[][]dGraph = genDGraph();
 			 String s2 = getInfoOfLeftEnd(includeStrs.get(idxMaxNumNodes).index, dGraph, 1);
 
@@ -423,7 +431,7 @@ public class Reconstruction {
 	}
 	/*
 	 * reconstruct a sequence which starts from a left end.
-	 * return: ret[0]-the consensus, ret[1]-the number of nodes used for reconstruction.
+	 * return: ret[0]-the consensus, ret[1]-the total number of nodes used for reconstruction.
 	 */
 	public String[] reconstructSeq(ArrayList<StartPos> a) {
 		String[] ret = new String[2];
@@ -440,7 +448,6 @@ public class Reconstruction {
 		StartPos[] tmpResultArray = new StartPos[sizeOfa]; //store the starting positions of ests
 		for (int i=0; i<sizeOfa; i++) {
 			tmpResultArray[i] = a.get(i);
-			usedNodes[a.get(i).index] = 1;	//mark that the node is used.
 		}
 		MergeSort merge = new MergeSort();
 		merge.sort(tmpResultArray);
@@ -464,10 +471,12 @@ public class Reconstruction {
 */		
 		ArrayList<SingleBase> bases = new ArrayList<SingleBase> ();
 		String tConsensus = g.getSeqOfNode(resultArray[0].index);
+		usedNodes[resultArray[0].index] = 1;	//mark that the node is used.
 		String curSeq = "";
 		int len = resultArray.length - 1;
 		for (int i=1; i<=len; i++) {
 			curSeq = g.getSeqOfNode(resultArray[i].index);
+			usedNodes[resultArray[i].index] = 1;	//mark that the node is used.
 			String[] strs = alignment.getLocalAlignment(tConsensus, curSeq);
 			tConsensus = tConsensus.replace(strs[0].replace("-", ""), strs[0]);
 			int offset = tConsensus.indexOf(strs[0]);
@@ -536,13 +545,11 @@ public class Reconstruction {
 			int curIdx = input[i].index;
 			int pos = input[i].pos;
 			retList.add(new UsedNode(curIdx, pos));
-			usedNodes[curIdx] = 1;	//mark that the node is used.
 			
 			int[] chdIdx = incNodes.containPNode(curIdx, g.graphNodes.size()); //inclusion children index of the curIdx if exist.
 			if (chdIdx != null) {
 				for (int j=0; j<chdIdx.length; j++) {
 					retList.add(new UsedNode(chdIdx[j], pos+1));
-					usedNodes[chdIdx[j]] = 1;	//mark that the node is used.
 				}
 			}
 		}

@@ -36,6 +36,7 @@ public class ResultAnalysis {
 	String estaTime;
 	String cap3NumUsedEsts;
 	String eastNumUsedEsts;
+	String outputFileName;
 	//Alignment alignment;
 	
 	public ResultAnalysis(Properties props) {
@@ -73,6 +74,8 @@ public class ResultAnalysis {
 		//number of ESTs that are used by east
 		strs = readFile(props.getProperty("EastNumUsedEsts"));
 		if (strs != null)	eastNumUsedEsts = strs.get(0);
+		
+		outputFileName = props.getProperty("OutputFile");
 	}
 
 	/*
@@ -183,7 +186,7 @@ public class ResultAnalysis {
 		 * write c1-c10 into the output file "analysis.out" in fasta format.
 		 */
 		try{ 
-			File outFile = new File("OutputFile");
+			File outFile = new File(outputFileName);
 			boolean bExists = outFile.exists();
 			if (bExists) {
 				outFile.delete();
