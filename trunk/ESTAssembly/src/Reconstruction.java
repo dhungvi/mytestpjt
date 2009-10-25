@@ -278,11 +278,13 @@ public class Reconstruction {
 		} else if (flag == 1) { //get consensus
 			printStr = printStr + Debugger.printLeftEndInfo(leftEnd, g); //get information of this left end which is used to start reconstruction.
 			String[] tStr = reconstructSeq(tmpArray);
-			//this is an estimated value, not an exact one because some nodes may repeat (both from nodes2 in inclusion list and also exist in the ordinary list)
-			//the value in numOfUsedEsts file is an exact value.
-			printStr = printStr + String.valueOf(tStr[1]) + " nodes are used to reconstruct the sequence.(estimated. real number<= the number)\n";
-			printStr = printStr + tStr[0] + "\n\n";
-			ret = tStr[0]; 
+			if (tStr != null) {
+				//this is an estimated value, not an exact one because some nodes may repeat (both from nodes2 in inclusion list and also exist in the ordinary list)
+				//the value in numOfUsedEsts file is an exact value.
+				printStr = printStr + String.valueOf(tStr[1]) + " nodes are used to reconstruct the sequence.(estimated. real number<= the number)\n";
+				printStr = printStr + tStr[0] + "\n\n";
+				ret = tStr[0]; 
+			}
 		}
 		
 		//re-exchange index of node 0 and the left-end node to recover dGraph to its original values. 
@@ -345,7 +347,10 @@ public class Reconstruction {
 				}
 			}
 
-			allOutputContigs.add(processLeftEndsWithInclusion(includedEnds));
+			String contig = processLeftEndsWithInclusion(includedEnds);
+			if ((contig != null) && (contig.trim().compareTo("") != 0)) {
+				allOutputContigs.add(contig);
+			}
 			if (excludedEnds.size() == 0) {
 				break;
 			} else {
@@ -439,10 +444,10 @@ public class Reconstruction {
 		if (sizeOfa == 0) {
 			return null;
 		} else if (sizeOfa == 1) {
-			 ret[0] = g.getSeqOfNode(a.get(0).index);
-			 ret[1] = Integer.toString(1);
-			 usedNodes[a.get(0).index] = 1;	//mark that the node is used.
-			 return ret;
+			 //ret[0] = g.getSeqOfNode(a.get(0).index);
+			 //ret[1] = Integer.toString(1);
+			 //usedNodes[a.get(0).index] = 1;	//mark that the node is used.
+			 return null; //this node should be a singleton if it is not used in other place. it shouldn't appear as a consensus sequence.
 		}
 		
 		StartPos[] tmpResultArray = new StartPos[sizeOfa]; //store the starting positions of ests
