@@ -74,7 +74,7 @@ public class ESTAssembly {
 					String[] paras = str.split("_");
 					ests.add(paras[1]);
 					//ests.add("0"); //starting position
-					ests.add(str); //comment
+					ests.add(str.substring(1)); //comment
 					
 					//get est in the next lines
 					str = in.readLine();
