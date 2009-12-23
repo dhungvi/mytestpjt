@@ -1,0 +1,22 @@
+coverage depth >= 20, now use 20.
+
+ovlThreshold=40
+
+checkAS1:
+window=150
+Two standards work:
+1) 
+threshold=size/2
+previous window: noOfNonovl > threshold
+second window: noOfNonovl > threshold
+Use second window as startPos and endPos.
+
+2)
+threshold=size*size*3/16
+current window: noOfNonovl > threshold
+Use current window as startPos and endPos.
+
+The identified window is almost always the one just before the window where the separation point is located.
+All the strings with starting position<=startPos are used to construct first part. 
+All the strings with starting position>startPos are used to construct last parts. 
+Here we don't use endPos.

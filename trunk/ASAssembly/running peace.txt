@@ -1,0 +1,9 @@
+python wrapper.py geneFile.fa 50 0
+
+
+qsub -I
+mpiexec ./peace --estFile estFile.fa --output-mst-file mstFile.mst
+
+At a very rough estimate, the coverage of the gene in your simulations is k*360/m, 
+where k is the number of ESTs and m is the length of the gene.  
+For now, you would like coverage to be fairly high (>= 7) if possible.
