@@ -66,7 +66,7 @@ public:
 	std::vector<int> usedNodes;	//index of the array is the index of the node, 1-used, 0-not used. It is used to identify singletons.
 
 	Reconstruction();
-	Reconstruction(Graph* graph, std::vector<SixTuple*> align, std::vector<SixTuple*> leftEnds, InclusionNodes* inc);
+	Reconstruction(Graph* graph, std::vector<SixTuple*> align, std::vector<SixTuple*> leftEnds, InclusionNodes* inc, const std::string& con, const std::string& sing, const std::string& numF);
 	void getConsensus();
 	std::vector<std::string> reconstructSeq(std::vector<StartPos>& a);
 
@@ -80,9 +80,9 @@ private:
 	int getNumUsedNodes(std::vector<StartPos>& a);
 	std::string getCurConsensus(std::vector<SingleBase*> bases);
 	std::vector<UsedNode> addInclusionNodes(std::vector<StartPos>& input);
-	DefGraph constructMinTree(int nOfNodes, std::vector<std::vector<int> >& input, int source);
+	DefGraph constructMinTree(int nOfNodes, const std::vector<std::vector<int> >& input, int source);
 	void getStartPos(int parentNode, DefGraph& tree, std::vector<std::vector<int> >& d);
-	std::string replace(std::string& str, const std::string& old, const std::string& newstr);
+	std::string replace(std::string str, const std::string& old, const std::string& newstr);
 	std::string printLeftEndInfo(int leftEnd);
 };
 

@@ -24,6 +24,7 @@ private:
 	       case 'G' : return 2;
 	       case 'T' : return 3;
 	       case 'N' : return 4;
+	       case 'P' : return 5;
 	   }
 	   return -1;
 	}

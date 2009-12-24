@@ -4,45 +4,28 @@
 #include "Param.h"
 using namespace std;
 
-string toUpperCase(string str) {
-	string retStr;
-	for (int i=0; i<str.size(); i++) {
-		retStr.push_back(toupper(str[i]));
-	}
-	return retStr;
-}
-
 int main(int argc, char* argv[]) {
-//	OvlDistance ovl1;
-//	string s1 = "GCACCAGCGCGGGCAGTAGCCATTGCGCCCGCAGGCATGGACCGGGCGGAGGGCCTGGGGCGCTTGATATGATTGGAGCTGGGCGGCCGCGCTCGCTGCTCGGAACTACCGCGCCTCGTGCCTGGACAGCAATGAACAGCGGAGCGGGCTACTGACGCGCATTGGGGGCACTGAGGCCGCACAACACGGAGCAGGAGCATTTGGATTGTGGTTGCGGCGCGCTGCAGCTGAACGGGCAGGCCGTTCGAGCGGTGGCGTTCCGCTACGCAGTAGCTGCGCGGACGGGCACCATTGAAAGTCGCATGGTTTTCATGTTTTACGGCTGACCAGTCGGTTCATGCTCCTTGAATTGCG";
-//	string s2 = "CATTGCTGGCAGCAGCGCGGGAAGTAGCCATTGCGCCCGCAAGCATGGACCGGGCGGAGGGCCTGGGGCGCTTGATATGATTGGAGCTGGGCGGCCGCGCTCGCTGCTCGGATCTACCGCGCCTCGTGCCTGGACAGCAATGAACAGCGGAGCCGGCTACTGACGCGCATTGGGGGCACTGAGGCCGCACAACACGGAGCAGGAGCATTTGGATTGTGGTTGTGGCGCGCAGCAGCTGAACGGGCCGGCCGTTCGAGCGGTGGCGTTCCGCTACGCAGTAGCGGCGCGGACGTGCACCATGGTAAGTCGCATGGTTTTCATGTTTTACGGCTGACCAGTCGCTTCATGCTCCTTGCATTGCTCAGGTGCTGATGAGCATCCGCTGCCGTGACAACCACGGTGCCGTGGCCGAGGAGGCCCTGCGCCGCGCCAAGTTCAAGTTCCCCGGCCGGCAGAA";
-//	vector<int> a = ovl1.getOVLDistance(s2, s1);
-//	for (int i=0; i<a.size(); i++) {
-//		cout << a[i] <<endl;
-//	}
+	//The input ests are put into this file
+	string ESTFILE = "estFile.fa";
+	//The MST is in the file
+	string MSTFILE = "mstFile.mst";
+	//Consensus sequencs are put into this file
+	string CONSENSUSFILE = "consensus.out";
+	//Singletons are put into this file
+	string SINGLETONFILE = "singleton.out";
+	//The number of ESTS that EAST used in the assembly is put into the file
+	string NUMOFUSEDEST = "numOfUsedEsts.out";
 
-//	InclusionNodes* incNodes = new InclusionNodes();
-//	Graph g(incNodes);
-//	g.get2CloseNodesFromMST();
-//	if (argc > 1) {
-//		ESTFILE = argv[1];
-//		MSTFILE = argv[2];
-//		CONSENSUSFILE = argv[3];
-//		SINGLETONFILE = argv[4];
-//		NUMOFUSEDEST = argv[5];
-//	} else {
-//		ESTFILE = "estFile.fa";
-//		MSTFILE = "mstFile.mst";
-//		CONSENSUSFILE = "consensus.out";
-//		SINGLETONFILE = "singleton.out";
-//		NUMOFUSEDEST = "numOfUsedEsts.out";
-//	}
-//
-//	ESTAssembly assemble;
-//	assemble.assemble();
-	char* a = "asd";
-	string s = a;
-	cout << s << endl;
+	if (argc > 1) {
+		ESTFILE = argv[1];
+		MSTFILE = argv[2];
+		CONSENSUSFILE = argv[3];
+		SINGLETONFILE = argv[4];
+		NUMOFUSEDEST = argv[5];
+	}
+
+	ESTAssembly assemble(ESTFILE, MSTFILE);
+	assemble.assemble(CONSENSUSFILE, SINGLETONFILE, NUMOFUSEDEST);
 }
 
 

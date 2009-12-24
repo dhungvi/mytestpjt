@@ -41,19 +41,16 @@ bool operator< (const LeftEnd& k1, const LeftEnd& k2) {
 Reconstruction::Reconstruction() {
 	g = NULL;
 	incNodes = NULL;
-	consensusFileName = CONSENSUSFILE;
-	singletonFileName = SINGLETONFILE;
-	numOfUsedESTsFileName = NUMOFUSEDEST;
 }
 
-Reconstruction::Reconstruction(Graph* graph, vector<SixTuple*> align, vector<SixTuple*> leftEnds, InclusionNodes* inc) {
+Reconstruction::Reconstruction(Graph* graph, vector<SixTuple*> align, vector<SixTuple*> leftEnds, InclusionNodes* inc, const std::string& con, const std::string& sing, const std::string& numF) {
 	g = graph;
 	alignArray = align;
 	incNodes = inc;
 	leftMostNodes = leftEnds;
-	consensusFileName = CONSENSUSFILE;
-	singletonFileName = SINGLETONFILE;
-	numOfUsedESTsFileName = NUMOFUSEDEST;
+	consensusFileName = con;
+	singletonFileName = sing;
+	numOfUsedESTsFileName = numF;
 
 	usedNodes = vector<int> (g->graphNodes.size(), 0);
 
@@ -461,11 +458,11 @@ string Reconstruction::getCurConsensus(vector<SingleBase*> bases) {
 /*
  * in string 'str', replace 'old' with 'new'.
  */
-string Reconstruction::replace(string& str, const string& old, const string& newstr) {
+string Reconstruction::replace(string str, const string& old, const string& newstr) {
 	size_t found = str.find(old);
 	while (found != string::npos) { //there is "old" in the sequence
 		str.replace(found, old.size(), newstr);
-		found = str.find(old, found+old.size());
+		found = str.find(old, found+old.size()-1);
 	}
 	return str;
 }
@@ -476,18 +473,22 @@ string Reconstruction::replace(string& str, const string& old, const string& new
  * For each element in the arraylist, put its corresponding node just after it.
  */
 vector<UsedNode> Reconstruction::addInclusionNodes(vector<StartPos>& input) {
+	map<int, int> tmpList;
 	vector<UsedNode> retList;
 	int size = input.size();
 
 	for (int i=0; i<size; i++) {
 		int curIdx = input[i].index;
 		int pos = input[i].pos;
-		retList.push_back(UsedNode(curIdx, pos));
+		tmpList.insert(pair<int, int> (curIdx, pos));
 
 		vector<int> chdIdx = incNodes->containPNode(curIdx); //inclusion children index of the curIdx if exist.
 		for (int j=0; j<chdIdx.size(); j++) {
-			retList.push_back(UsedNode(chdIdx[j], pos+1));
+			tmpList.insert(pair<int, int> (chdIdx[j], pos+1));
 		}
+	}
+	for (map<int, int>::iterator it = tmpList.begin(); it != tmpList.end(); it++) {
+		retList.push_back(UsedNode(it->first, it->second));
 	}
 	sort(retList.begin(), retList.end());
 	return retList;
@@ -500,7 +501,7 @@ vector<UsedNode> Reconstruction::addInclusionNodes(vector<StartPos>& input) {
  *  @param g a directed graph, the second dimension has three elements:
  *  	index of starting node, index of ending node, weight between them.
  */
-DefGraph Reconstruction::constructMinTree(int nOfNodes, vector<vector<int> >& input, int source) {
+DefGraph Reconstruction::constructMinTree(int nOfNodes, const vector<vector<int> >& input, int source) {
 	// Make a directed graph.
 	DefGraph dGraph(nOfNodes);
 	for (int j=0; j<input.size(); j++) {
@@ -552,7 +553,7 @@ string Reconstruction::printLeftEndInfo(int leftEnd) {
 			//if overlap length is less than windowsize, we consider they're not overlapping.
 			//if not, we see them as overlapping,so this is not a real left end.
 			if ((tmpSp + tmpLn - sp) >= ((g->ovl).d2.getWindowSize())) {
-				out << ret << "Node " << leftEnd << " is not a real left-most node. \n";
+				out << ret << "Node " << leftEnd << " is not a real left-most node. ";
 				ret = out.str();
 				out.str("");
 				out.clear();

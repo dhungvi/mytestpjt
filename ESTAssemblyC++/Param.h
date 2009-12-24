@@ -27,19 +27,6 @@ const int UV_SKIP=16;
 const int T=65;
 const int TV_MAX=100;
 
-//Parameters for EST Assembler
-
-//The input ests are put into this file
-const std::string ESTFILE = "estFile.fa";
-//The MST is in the file
-const std::string MSTFILE = "mstFile.mst";
-//Consensus sequencs are put into this file
-const std::string CONSENSUSFILE = "consensus.out";
-//Singletons are put into this file
-const std::string SINGLETONFILE = "singleton.out";
-//The number of ESTS that EAST used in the assembly is put into the file
-const std::string NUMOFUSEDEST = "numOfUsedEsts.out";
-
 //The number of levels we will do in order to verify a left end. "0" means doing until leaves.
 const int NUMOFLEVELS=0;
 
