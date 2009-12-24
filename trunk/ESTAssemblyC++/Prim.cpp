@@ -37,13 +37,13 @@ void NodeHeap::bubbleUp(int currentNode) {
 void NodeHeap::bubbleDown(int currentNode) {
   while (1) {
     int leftChild = 2*currentNode + 1;
-    if (leftChild >= V.size())
+    if (leftChild >= (int)V.size())
       break;
 
     int rightChild = leftChild+1;
 
     int bestIndex = V[currentNode].distance < V[leftChild].distance ? currentNode : leftChild;
-    if (rightChild < V.size() && V[rightChild].distance < V[bestIndex].distance)
+    if (rightChild < (int)V.size() && V[rightChild].distance < V[bestIndex].distance)
       bestIndex = rightChild;
 
     if (bestIndex == currentNode)
@@ -59,7 +59,7 @@ bool NodeHeap::contains(int node) {
 }
 
 void NodeHeap::push(int node, int source, int distance) {
-  assert(node < M.size());
+  assert(node < (int)M.size());
   NodeEntry ne(node, source, distance);
   M[node] = V.size();
 
@@ -88,15 +88,17 @@ void NodeHeap::update(int node, int source, int newDistance) {
   }
 }
 
-DefGraph Prim(DefGraph G, int source, bool directed) {
+DefGraph Prim(DefGraph G, int source, bool directed, bool forrest) {
   DefGraph T(G.size());
   NodeHeap H(G.size());
-  for (int i=0; i < G.size(); i++)
+  for (int i=0; i < (int)G.size(); i++)
     H.push(i, -1, INT_MAX);
 
   H.update(source,-1,0);
   while (!H.empty()) {
    NodeEntry ne = H.pop();
+   if (!forrest && (ne.distance == INT_MAX))
+     break;
 
    if (ne.source != -1) {
      T[ne.source].push_back(Edge(ne.node, ne.distance));
@@ -137,14 +139,14 @@ void addNode(DefGraph& G) {
 }
 
 void addEdge(DefGraph& G, int s, int t, int weight, bool directed) {
-  assert(s < G.size() && t < G.size());
+  assert(s < (int)G.size() && t < (int)G.size());
   G[s].push_back(Edge(t,weight));
   if (!directed)
     G[t].push_back(Edge(s,weight));
 }
 
 int degree(DefGraph G, int n) {
-  assert(n < G.size());
+  assert(n < (int)G.size());
   return G[n].size();
 }
 

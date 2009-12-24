@@ -3,18 +3,20 @@
 using namespace std;
 
 
-ESTAssembly::ESTAssembly() {
+ESTAssembly::ESTAssembly(std::string& estF, std::string& mstF) {
 	incNodes = new InclusionNodes();
 	g = new Graph(incNodes);
     gen = NULL;
     rec = NULL;
+    estFileName = estF;
+    mstFileName = mstF;
 }
 
-void ESTAssembly::assemble() {
-	readEstFile(ESTFILE);
-	readMST(MSTFILE);
+void ESTAssembly::assemble(std::string& con, std::string& sing, std::string& numF) {
+	readEstFile(estFileName);
+	readMST(mstFileName);
 	gen = new SixTuplesGeneration(g, incNodes);
-	rec = new Reconstruction(g, gen->getAlignArray(), gen->getLeftEnds(), incNodes);
+	rec = new Reconstruction(g, gen->getAlignArray(), gen->getLeftEnds(), incNodes, con, sing, numF);
 	rec->getConsensus();
 }
 

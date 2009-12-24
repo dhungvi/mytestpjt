@@ -61,7 +61,7 @@ private:
 typedef std::vector<std::vector<Edge> > DefGraph;
 typedef std::vector<Edge>::iterator EdgeIterator;
 
-DefGraph Prim(DefGraph G, int source, bool directed = true);
+DefGraph Prim(DefGraph G, int source, bool directed = true, bool forrest=false);
 
 void addNode(DefGraph& G);
 void addEdge(DefGraph& G, int s, int t, int weight, bool directed = true);

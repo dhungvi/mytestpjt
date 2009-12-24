@@ -33,7 +33,7 @@ public:
 	}
 private:
 	std::vector<SixTuple*> handleInclusion();
-	SixTuple findAdjacentNode(std::stack<int>& nodes, int index, const SixTuple sixTuple);
+	SixTuple findAdjacentNode(std::stack<int> nodes, int index, const SixTuple sixTuple);
 	std::vector<std::stack<int> > getNodesFromMST(std::vector<std::stack<int> > nodes);
 
 public:

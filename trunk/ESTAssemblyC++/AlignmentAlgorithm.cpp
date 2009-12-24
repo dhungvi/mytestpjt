@@ -4,32 +4,43 @@
 using namespace std;
 
 AlignmentAlgorithm::AlignmentAlgorithm(int match, int mismatch, int gap) {
-	 IntMatrix score(5,5);
+	 IntMatrix score(6,6);
 	 score.set(0, 0, match);
 	 score.set(0, 1, mismatch);
 	 score.set(0, 2, mismatch);
 	 score.set(0, 3, mismatch);
 	 score.set(0, 4, mismatch);
+	 score.set(0, 5, mismatch);
 	 score.set(1, 0, mismatch);
 	 score.set(1, 1, match);
 	 score.set(1, 2, mismatch);
 	 score.set(1, 3, mismatch);
 	 score.set(1, 4, mismatch);
+	 score.set(1, 5, mismatch);
 	 score.set(2, 0, mismatch);
 	 score.set(2, 1, mismatch);
 	 score.set(2, 2, match);
 	 score.set(2, 3, mismatch);
 	 score.set(2, 4, mismatch);
+	 score.set(2, 5, mismatch);
 	 score.set(3, 0, mismatch);
 	 score.set(3, 1, mismatch);
 	 score.set(3, 2, mismatch);
 	 score.set(3, 3, match);
 	 score.set(3, 4, mismatch);
+	 score.set(3, 5, mismatch);
 	 score.set(4, 0, mismatch);
 	 score.set(4, 1, mismatch);
 	 score.set(4, 2, mismatch);
 	 score.set(4, 3, mismatch);
 	 score.set(4, 4, match);
+	 score.set(4, 5, mismatch);
+	 score.set(5, 0, mismatch);
+	 score.set(5, 1, mismatch);
+	 score.set(5, 2, mismatch);
+	 score.set(5, 3, mismatch);
+	 score.set(5, 4, mismatch);
+	 score.set(5, 5, match);
 
 	 this->setScoringMatrix(score);
 	 this->setGapPenalty(gap);

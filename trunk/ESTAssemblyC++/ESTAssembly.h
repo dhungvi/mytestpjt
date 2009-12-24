@@ -15,11 +15,13 @@ public:
 	Reconstruction* rec;
 	InclusionNodes* incNodes;
 
-	ESTAssembly();
-	void assemble();
+	ESTAssembly(std::string& estF, std::string& mstF);
+	void assemble(std::string& con, std::string& sing, std::string& numF);
 	~ESTAssembly();
 
-//private:
+private:
+	std::string estFileName;
+	std::string mstFileName;
 	void readEstFile(const std::string& inFileName);
 	void readMST(const std::string& inFileName);
 	std::vector<std::string> split(const std::string& str, char delimit);

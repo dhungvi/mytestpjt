@@ -30,7 +30,7 @@ vector<SixTuple*> Graph::handleInclusion() {
 
 			if (curSeq.length() <= comSeq.length()) {
 				if (ovlDis[1] == INT_MIN) { //has inclusion
-					inc->addNode(i, index); //get rid of i and put it into inclusion list.
+					inc->addNode1(i, index); //get rid of i and put it into inclusion list.
 					flag = false;
 					break;
 				}
@@ -192,9 +192,9 @@ SixTuple Graph::get2CloseNodesFromGrand(int index, const SixTuple sixTuple) {
 
 		if (ovlDis[1] == INT_MIN) {	// there is inclusion between them
 			if (s1.length() >= s2.length()) {
-				inc->addNode(tmpIndex, index);
+				inc->addNode2(tmpIndex, index);
 			} else {
-				inc->addNode(index, tmpIndex);
+				inc->addNode2(index, tmpIndex);
 			}
 		} else if (ovlDis[1] != INT_MAX) {	// there is overlap between them
 			if (ovlDis[0] < 0) {
@@ -319,12 +319,16 @@ SixTuple Graph::checkRightEndFromMST(int index, const SixTuple sixTuple) {
  * @param index The index of current node.
  * @sixTuple The sixTuple for the current node.
  */
-SixTuple Graph::findAdjacentNode(stack<int>& nodes, int index, const SixTuple sixTuple) {
+SixTuple Graph::findAdjacentNode(stack<int> nodes, int index, const SixTuple sixTuple) {
 	stack<int> allNodes; //put all the values of nodes into another stack so that we won't change nodes(it's a pointer) because it may be used by the calling method.
 	int stackSize = nodes.size();
-	for (int i=0; i<stackSize; i++) { //get(0) will get the bottom element of the stack
-		allNodes.push(nodes.top());
+	vector<int> tmpStack(stackSize);
+	for (int i=stackSize-1; i>=0; i--) {
+		tmpStack[i] = nodes.top();
 		nodes.pop();
+	}
+	for (int i=0; i<stackSize; i++) { //get(0) will get the bottom element of the stack
+		allNodes.push(tmpStack[i]);
 	}
 
 	SixTuple closeNode;
@@ -337,13 +341,13 @@ SixTuple Graph::findAdjacentNode(stack<int>& nodes, int index, const SixTuple si
 	int overlapRight = sixTuple.rOvlLen;
 
 	//find two closest nodes
-	string s1 = graphNodes.at(index).getNodeStr();
+	string s1 = graphNodes[index].getNodeStr();
 	while (!allNodes.empty()) {
 		int tmpIndex = allNodes.top();
 		allNodes.pop();
 		if (inc->containInclusionNode(tmpIndex)) continue;
 		if (tmpIndex == index) continue;
-		string s2 = graphNodes.at(tmpIndex).getNodeStr();
+		string s2 = graphNodes[tmpIndex].getNodeStr();
 
 		vector<int> ovlDis = calDist.searchDistance(index, tmpIndex);
 		if ((ovlDis[1] == INT_MAX) && (ovlDis[0] == INT_MAX)) {
@@ -355,9 +359,9 @@ SixTuple Graph::findAdjacentNode(stack<int>& nodes, int index, const SixTuple si
 
 		if (ovlDis[1] == INT_MIN) { // there is inclusion between them
 			if (s1.length() >= s2.length()) {
-				inc->addNode(tmpIndex, index);
+				inc->addNode2(tmpIndex, index);
 			} else {
-				inc->addNode(index, tmpIndex);
+				inc->addNode2(index, tmpIndex);
 			}
 		} else if (ovlDis[1] != INT_MAX) { // there is overlap between them
 			if (ovlDis[0] < 0) {
