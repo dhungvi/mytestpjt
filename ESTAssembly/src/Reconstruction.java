@@ -1,3 +1,4 @@
+package eSTAssembly;
 // reconstruction from all the ESTs
 
 import java.io.BufferedWriter;
@@ -33,7 +34,8 @@ public class Reconstruction {
 	ArrayList<String> numOfNodes;	//store number of used nodes, corresponds to each element in allConsensus.
 	ArrayList<String> firstEsts;	//includes all the left end sequence corresponding to each element in allConsensus.
 	int[] usedNodes;	//index of the array is the index of the node, 1-used, 0-not used. It is used to identify singletons.
-	
+	int comparisonLen;
+
 	public Reconstruction(Properties props, Graph graph, ArrayList<SixTuple> align, ArrayList<SixTuple> leftEnds, InclusionNodes inc) {
 		g = graph;
 		alignArray = align;
@@ -44,6 +46,7 @@ public class Reconstruction {
 		consensusFileName = props.getProperty("ConsensusFile");
 		singletonFileName = props.getProperty("SingletonFile");
 		numOfUsedESTsFileName = props.getProperty("NumOfUsedESTs");
+		comparisonLen = Integer.parseInt(props.getProperty("ComparisonLength"));
 		alignment = new Alignment(props);
 		
 		printStr = "";
@@ -459,7 +462,6 @@ public class Reconstruction {
 		
 		TreeSet<UsedNode> addedNodes = addInclusionNodes(tmpResultArray);  //add all those related inclusion nodes into it for reconstruction.
 		ret[1] = Integer.toString(addedNodes.size());
-
 		StartPos[] resultArray = new StartPos[addedNodes.size()]; 
 		Object[] r1 = addedNodes.toArray();
 		for (int i=0; i<resultArray.length; i++) {
@@ -482,7 +484,11 @@ public class Reconstruction {
 		for (int i=1; i<=len; i++) {
 			curSeq = g.getSeqOfNode(resultArray[i].index);
 			usedNodes[resultArray[i].index] = 1;	//mark that the node is used.
-			String[] strs = alignment.getLocalAlignment(tConsensus, curSeq);
+			String tmpConsensus = tConsensus;
+			if (tmpConsensus.length() > comparisonLen) {
+				tmpConsensus = tConsensus.substring(tConsensus.length()-comparisonLen+1);
+			}
+			String[] strs = alignment.getLocalAlignment(tmpConsensus, curSeq);
 			tConsensus = tConsensus.replace(strs[0].replace("-", ""), strs[0]);
 			int offset = tConsensus.indexOf(strs[0]);
 			
