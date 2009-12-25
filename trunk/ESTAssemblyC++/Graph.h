@@ -5,6 +5,7 @@
 #include <string>
 #include <limits.h>
 #include <stack>
+#include <map>
 #include "Param.h"
 #include "Node.h"
 #include "OvlDistance.h"
