@@ -27,6 +27,7 @@ void SixTuplesGeneration::createAlignArray() {
 
 void SixTuplesGeneration::processAlignArray() {
 	vector<SixTuple*> rightMostNodes;
+	map<int, int> ends; //used to avoid duplicate calculation for right most nodes
 	//get all the nodes which has no left nodes or no right nodes to them
 	for (int i=0; i<alignArray.size(); i++) {
 		SixTuple* curTuple = alignArray[i];
@@ -46,6 +47,7 @@ void SixTuplesGeneration::processAlignArray() {
 		for (int i=0; i<numOfLeftMostNodes; i++) {
 			SixTuple* curTuple = leftMostNodes[i];
 			int cNode = curTuple->curNode;
+			ends.insert(pair<int, int> (cNode, 0));
 			SixTuple lNode = g->get2CloseNodesFromGrand(cNode, *curTuple);
 			curTuple->leftNode = lNode.leftNode;
 			curTuple->lOvlLen = lNode.lOvlLen;	//overlap length
@@ -61,14 +63,15 @@ void SixTuplesGeneration::processAlignArray() {
 	for (int i=0; i<rightMostNodes.size(); i++) {
 		SixTuple* curTuple = rightMostNodes[i];
 		int cNode = curTuple->curNode;
-		SixTuple lNode = g->get2CloseNodesFromGrand(cNode, *curTuple);
-		if (lNode.rightNode != -1) {
-			curTuple->rightNode = lNode.rightNode;
-			curTuple->rOvlLen = lNode.rOvlLen;
-			curTuple->rDis = lNode.rDis;
+		pair<map<int,int>::iterator,bool> insertRet = ends.insert(pair<int, int> (cNode, 0));
+		if (insertRet.second == true) { //if cNode has not been calculated as a left end
+			SixTuple lNode = g->get2CloseNodesFromGrand(cNode, *curTuple);
+			if (lNode.rightNode != -1) {
+				curTuple->rightNode = lNode.rightNode;
+				curTuple->rOvlLen = lNode.rOvlLen;
+				curTuple->rDis = lNode.rDis;
+			}
 		}
-//if ((cNode==30) || (cNode==32))
-//cout << curTuple->rightNode << "\t" <<curTuple->rOvlLen << "\t" <<curTuple->rDis <<endl;
 	}
 
 	leftMostNodes.clear();
@@ -84,7 +87,7 @@ void SixTuplesGeneration::processAlignArray() {
 	}
 	cout << "\nThere are " << leftMostNodes.size() << " left-most nodes after running 3 levels." << endl;
 	cout << "There are " << rightMostNodes.size() << " right-most nodes after running 3 levels." << endl;
-
+	ends.clear();
 	/* Recalculate 6-tuples for all the current left nodes in order to remove all the false left ends.
 	 * Specifically, for those assumed left ends,start to calculate from fourth level until meeting one node which
 	 * makes six-tuple[0] != -1 or until the level we specified in the property file, then return the six-tuple.
@@ -93,6 +96,7 @@ void SixTuplesGeneration::processAlignArray() {
 	for (int i=0; i<leftMostNodes.size(); i++) {
 		SixTuple* curTuple = leftMostNodes[i];
 		int tEnd = curTuple->curNode; //index of the node
+		ends.insert(pair<int, int> (tEnd, 0));
 		SixTuple tmpTuple = g->checkLeftEndFromMST(tEnd, *curTuple);
 		if (!tmpTuple.isNull) {
 			curTuple->leftNode = tmpTuple.leftNode;
@@ -107,17 +111,21 @@ void SixTuplesGeneration::processAlignArray() {
 	for (int i=0; i<rightMostNodes.size(); i++) {
 		SixTuple* curTuple = rightMostNodes[i];
 		int tEnd = curTuple->curNode; //index of the node
-		SixTuple tmpTuple = g->checkRightEndFromMST(tEnd, *curTuple);
-		if (!tmpTuple.isNull) {
-			curTuple->rightNode = tmpTuple.rightNode;
-			curTuple->rOvlLen = tmpTuple.rOvlLen;
-			curTuple->rDis = tmpTuple.rDis;
-			curTuple->isNull = tmpTuple.isNull;
+		pair<map<int,int>::iterator,bool> insertRet = ends.insert(pair<int, int> (tEnd, 0));
+		if (insertRet.second == true) { //if tEnd has not been calculated as a left end
+			SixTuple tmpTuple = g->checkRightEndFromMST(tEnd, *curTuple);
+			if (!tmpTuple.isNull) {
+				curTuple->rightNode = tmpTuple.rightNode;
+				curTuple->rOvlLen = tmpTuple.rOvlLen;
+				curTuple->rDis = tmpTuple.rDis;
+				curTuple->isNull = tmpTuple.isNull;
+			}
 		}
 	}
 
 	leftMostNodes.clear();
 	rightMostNodes.clear();
+	ends.clear();
 	for (int i=0; i<alignArray.size(); i++) {
 		SixTuple* curTuple = alignArray[i];
 		if (curTuple->leftNode == -1) {

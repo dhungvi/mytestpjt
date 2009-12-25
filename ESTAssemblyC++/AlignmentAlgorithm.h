@@ -18,7 +18,7 @@ private:
 	IntMatrix scoreMatrix; //A, C, G, T, N
 	int gapPenalty;
 	inline int encodeBase(char c) {
-	    switch (toupper(c)) {
+	    switch (c) {
 	       case 'A' : return 0;
 	       case 'C' : return 1;
 	       case 'G' : return 2;
@@ -39,6 +39,7 @@ public:
 	AlignResult getNWAlignment(const std::string& s1, const std::string& s2);
 	int getSWScore(const std::string& s1, const std::string& s2);
 	AlignResult getSWAlignment(const std::string& s1, const std::string& s2);
+	std::vector<int> encodeString(const std::string& s1);
 };
 
 
