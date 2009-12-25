@@ -52,7 +52,8 @@ void SixTuplesGeneration::processAlignArray() {
 			curTuple->leftNode = lNode.leftNode;
 			curTuple->lOvlLen = lNode.lOvlLen;	//overlap length
 			curTuple->lDis = lNode.lDis;	//distance
-			if (curTuple->rDis > lNode.rDis) { //get a smaller distance
+			//if (curTuple->rDis > lNode.rDis) { //get a smaller distance
+			if ((lNode.rightNode != -1) && (curTuple->rDis > lNode.rDis)) { //get a smaller distance
 				curTuple->rightNode = lNode.rightNode;
 				curTuple->rOvlLen = lNode.rOvlLen;
 				curTuple->rDis = lNode.rDis;
@@ -102,6 +103,8 @@ void SixTuplesGeneration::processAlignArray() {
 			curTuple->leftNode = tmpTuple.leftNode;
 			curTuple->lOvlLen = tmpTuple.lOvlLen;	//overlap length
 			curTuple->lDis = tmpTuple.lDis;	//distance
+		}
+		if (tmpTuple.rightNode != -1) {
 			curTuple->rightNode = tmpTuple.rightNode;
 			curTuple->rOvlLen = tmpTuple.rOvlLen;
 			curTuple->rDis = tmpTuple.rDis;
