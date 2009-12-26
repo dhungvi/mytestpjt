@@ -30,4 +30,7 @@ const int TV_MAX=100;
 //The number of levels we will do in order to verify a left end. "0" means doing until leaves.
 const int NUMOFLEVELS=0;
 
+//The possible longest length of est. It's used in Reconstruction to reduce the length of strings doing local alignment
+const int COMPARISON_LENGTH=800;
+
 #endif

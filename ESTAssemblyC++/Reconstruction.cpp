@@ -372,6 +372,7 @@ vector<string> Reconstruction::reconstructSeq(vector<StartPos>& a) {
 	}
 	sort(resultArray.begin(), resultArray.end());
 
+	int comparisonLen = COMPARISON_LENGTH;
 	vector<SingleBase*> bases;
 	string tConsensus = g->getSeqOfNode(resultArray[0].index);
 	usedNodes[resultArray[0].index] = 1;	//mark that the node is used.
@@ -380,7 +381,11 @@ vector<string> Reconstruction::reconstructSeq(vector<StartPos>& a) {
 	for (int i=1; i<=len; i++) {
 		curSeq = g->getSeqOfNode(resultArray[i].index);
 		usedNodes[resultArray[i].index] = 1;	//mark that the node is used.
-		AlignResult strs = alignment.getLocalAlignment(tConsensus, curSeq);
+		string tmpConsensus = tConsensus;
+		if (tmpConsensus.length() > comparisonLen) {
+			tmpConsensus = tConsensus.substr(tConsensus.size()-comparisonLen+1);
+		}
+		AlignResult strs = alignment.getLocalAlignment(tmpConsensus, curSeq);
 		tConsensus = replace(tConsensus, replace(strs.str1, "-", ""), strs.str1);
 		int offset = (int)tConsensus.find(strs.str1);
 
