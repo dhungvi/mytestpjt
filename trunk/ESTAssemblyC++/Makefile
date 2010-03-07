@@ -28,7 +28,7 @@ ESTAssembly.o: ESTAssembly.cpp ESTAssembly.h Reconstruction.h Graph.h SixTuplesG
 Graph.o: Graph.cpp Graph.h Param.h Node.h OvlDistance.h CalculatedOvlDistance.h InclusionNodes.h SixTuple.h Prim.h
 	${CC} -c Graph.cpp ${OPTS}
 
-InclusionNodes.o: InclusionNodes.cpp InclusionNodes.h
+InclusionNodes.o: InclusionNodes.cpp InclusionNodes.h Prim.h
 	${CC} -c InclusionNodes.cpp ${OPTS}
 
 OvlDistance.o: OvlDistance.cpp OvlDistance.h Param.h D2.h Alignment.h
